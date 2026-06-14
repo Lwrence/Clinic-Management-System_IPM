@@ -181,24 +181,64 @@ If an installed build fails with an access denied error under `C:\Program Files`
 
 ## Releasing an Update
 
-For each new version:
+Use this flow when the app is already installed and you want to ship a newer build.
 
-Update the version in the Inno Setup script:
+First, update the version and installer output name in:
+
+```text
+installer\DentalClinicManagementSystem.iss
+```
+
+Example:
 
 ```ini
 #define MyAppVersion "1.0.1"
 OutputBaseFilename=CruzNeryDentalClinic-Setup-1.0.1
 ```
 
-Publish again:
+Keep the same `AppId`. Do not generate a new one for normal updates, because the same `AppId` lets Windows and Inno Setup recognize the installer as an update to the existing application.
+
+Publish the updated application again:
 
 ```powershell
 dotnet publish CruzNeryClinic.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -o publish\win-x64
 ```
 
-Compile the Inno Setup script again.
+Test the newly published application before compiling the installer:
 
-Keep the same `AppId` so Windows treats the installer as an update to the same application.
+```powershell
+& ".\publish\win-x64\Dental Clinic Management System.exe"
+```
+
+Check the main updated feature, then also quickly check login, dashboard loading, billing/receipt preview, reports, and backup/restore if those areas were affected.
+
+Open Inno Setup Compiler, open:
+
+```text
+installer\DentalClinicManagementSystem.iss
+```
+
+Compile again using:
+
+```text
+Build > Compile
+```
+
+or:
+
+```text
+Ctrl + F9
+```
+
+The new installer should be created under:
+
+```text
+installer\Output\CruzNeryDentalClinic-Setup-1.0.1.exe
+```
+
+Run the new installer. A normal update does not require uninstalling the previous version first. The installer should overwrite the old program files while preserving app data stored under `%LOCALAPPDATA%`.
+
+Do not delete the database unless you intentionally want a fresh system. Patient records, billing records, backups, generated receipts, keys, and other runtime data should remain outside the installed app folder.
 
 ## Notes
 

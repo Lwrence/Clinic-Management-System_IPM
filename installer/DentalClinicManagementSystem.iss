@@ -1,5 +1,5 @@
 #define MyAppName "Cruz-Nery Dental Clinic Management System"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.2.3"
 #define MyAppPublisher "Cruz-Nery Dental Clinic"
 #define MyAppExeName "Dental Clinic Management System.exe"
 
@@ -11,7 +11,7 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\Cruz-Nery Dental Clinic
 DefaultGroupName={#MyAppName}
 OutputDir=Output
-OutputBaseFilename=CruzNeryDentalClinic-Setup-1.2.0
+OutputBaseFilename=CruzNeryDentalClinic-Setup-1.2.3
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

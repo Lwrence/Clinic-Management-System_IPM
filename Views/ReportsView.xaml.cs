@@ -1,8 +1,10 @@
 using CruzNeryClinic.ViewModels;
+using CruzNeryClinic.Services;
 using CruzNeryClinic.Views.Charts;
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -11,11 +13,19 @@ namespace CruzNeryClinic.Views
     public partial class ReportsView : UserControl
     {
         private ReportsViewModel? _vm;
+        private bool isReportPrintPreviewReady;
+        private bool isReportPrintDialogOpening;
 
         public ReportsView()
         {
             InitializeComponent();
             DataContextChanged += OnDataContextChanged;
+            ReportPrintWebView.NavigationCompleted += ReportPrintWebView_NavigationCompleted;
+        }
+
+        private void ReportPrintWebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            isReportPrintPreviewReady = e.IsSuccess;
         }
 
         private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -115,7 +125,8 @@ namespace CruzNeryClinic.Views
 
             try
             {
-                await ReportPrintWebView.EnsureCoreWebView2Async();
+                isReportPrintPreviewReady = false;
+                await WebView2EnvironmentService.EnsureInitializedAsync(ReportPrintWebView);
                 ReportPrintWebView.Source = _vm.ReportPrintPreviewUri;
             }
             catch (Exception ex)
@@ -130,9 +141,13 @@ namespace CruzNeryClinic.Views
 
         private async void OpenReportPrintDialog_Click(object sender, RoutedEventArgs e)
         {
+            if (isReportPrintDialogOpening)
+                return;
+
             try
             {
-                await ReportPrintWebView.EnsureCoreWebView2Async();
+                isReportPrintDialogOpening = true;
+                await WebView2EnvironmentService.EnsureInitializedAsync(ReportPrintWebView);
 
                 CoreWebView2? webView = ReportPrintWebView.CoreWebView2;
 
@@ -147,6 +162,19 @@ namespace CruzNeryClinic.Views
                     return;
                 }
 
+                if (!isReportPrintPreviewReady)
+                {
+                    MessageBox.Show(
+                        "Print preview is still loading. Please try again in a moment.",
+                        "Print Preview",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+
+                    return;
+                }
+
+                ReportPrintWebView.Focus();
+                await Task.Delay(250);
                 webView.ShowPrintUI();
             }
             catch (Exception ex)
@@ -156,6 +184,10 @@ namespace CruzNeryClinic.Views
                     "Print Preview",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
+            }
+            finally
+            {
+                isReportPrintDialogOpening = false;
             }
         }
 

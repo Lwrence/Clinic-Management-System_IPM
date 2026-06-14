@@ -1,7 +1,9 @@
 using CruzNeryClinic.ViewModels;
+using CruzNeryClinic.Services;
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -14,6 +16,9 @@ namespace CruzNeryClinic.Views
     // - Print manual button (WebView2 print preview)
     public partial class HelpView : UserControl
     {
+        private bool isManualPrintPreviewReady;
+        private bool isManualPrintDialogOpening;
+
         #region Constructor
 
         public HelpView()
@@ -22,11 +27,17 @@ namespace CruzNeryClinic.Views
 
             DataContextChanged += HelpView_DataContextChanged;
             Unloaded += HelpView_Unloaded;
+            ManualPrintWebView.NavigationCompleted += ManualPrintWebView_NavigationCompleted;
         }
 
         #endregion
 
         #region WebView2 Print Preview
+
+        private void ManualPrintWebView_NavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            isManualPrintPreviewReady = e.IsSuccess;
+        }
 
         private void HelpView_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
@@ -56,7 +67,8 @@ namespace CruzNeryClinic.Views
 
             try
             {
-                await ManualPrintWebView.EnsureCoreWebView2Async();
+                isManualPrintPreviewReady = false;
+                await WebView2EnvironmentService.EnsureInitializedAsync(ManualPrintWebView);
                 ManualPrintWebView.Source = viewModel.ManualPrintPreviewUri;
             }
             catch (Exception ex)
@@ -72,9 +84,13 @@ namespace CruzNeryClinic.Views
 
         private async void OpenManualPrintDialog_Click(object sender, RoutedEventArgs e)
         {
+            if (isManualPrintDialogOpening)
+                return;
+
             try
             {
-                await ManualPrintWebView.EnsureCoreWebView2Async();
+                isManualPrintDialogOpening = true;
+                await WebView2EnvironmentService.EnsureInitializedAsync(ManualPrintWebView);
 
                 CoreWebView2? webView = ManualPrintWebView.CoreWebView2;
 
@@ -90,6 +106,20 @@ namespace CruzNeryClinic.Views
                     return;
                 }
 
+                if (!isManualPrintPreviewReady)
+                {
+                    MessageBox.Show(
+                        "Print preview is still loading. Please try again in a moment.",
+                        "Print Preview",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning
+                    );
+
+                    return;
+                }
+
+                ManualPrintWebView.Focus();
+                await Task.Delay(250);
                 webView.ShowPrintUI();
             }
             catch (Exception ex)
@@ -100,6 +130,10 @@ namespace CruzNeryClinic.Views
                     MessageBoxButton.OK,
                     MessageBoxImage.Error
                 );
+            }
+            finally
+            {
+                isManualPrintDialogOpening = false;
             }
         }
 
