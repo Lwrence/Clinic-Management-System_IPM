@@ -208,6 +208,19 @@ namespace CruzNeryClinic.ViewModels
         private int PrintRowLimit =>
             int.TryParse(SelectedPrintRowLimit, out int n) ? n : int.MaxValue;
 
+        // ── Report period (chosen in the Print options dialog) ──────────────────
+        // Lets a report be generated for the whole month, quarter, or year that
+        // contains the report's currently selected month/year, regardless of the
+        // filter-bar mode. Applies to both the PDF preview and the Excel export.
+        public List<string> PrintPeriodOptions { get; } = new() { "Monthly", "Quarterly", "Annual" };
+
+        private string _selectedReportPeriod = "Monthly";
+        public string SelectedReportPeriod
+        {
+            get => _selectedReportPeriod;
+            set => SetProperty(ref _selectedReportPeriod, value);
+        }
+
         // ── Export format (PDF preview vs. Excel workbook) ──────────────────────
         // Mutually exclusive: choosing one clears the other so the radio buttons
         // stay in sync with the backing state.
@@ -538,6 +551,53 @@ namespace CruzNeryClinic.ViewModels
             return (first.ToString("yyyy-MM-dd"), last.ToString("yyyy-MM-dd"));
         }
 
+        // Computes the date range (and a display label) for the report period
+        // chosen in the Print options dialog, anchored on the report's currently
+        // selected month/year so the printout matches the on-screen selection.
+        private (DateTime from, DateTime to, string label) GetPrintPeriodRange()
+        {
+            int year = _selectedFilterYear;
+            int monthIndex = _selectedFilterMonthIndex; // 0-based
+
+            switch (SelectedReportPeriod)
+            {
+                case "Quarterly":
+                {
+                    int quarter = monthIndex / 3;                 // 0..3
+                    int startMonth = quarter * 3 + 1;             // 1,4,7,10
+                    var from = new DateTime(year, startMonth, 1);
+                    var to = from.AddMonths(3).AddDays(-1);
+                    string label = $"Q{quarter + 1} {year} ({from:MMMM} – {to:MMMM})";
+                    return (from, to, label);
+                }
+                case "Annual":
+                {
+                    var from = new DateTime(year, 1, 1);
+                    var to = new DateTime(year, 12, 31);
+                    return (from, to, $"Annual {year}");
+                }
+                default: // Monthly
+                {
+                    var from = new DateTime(year, monthIndex + 1, 1);
+                    var to = from.AddMonths(1).AddDays(-1);
+                    return (from, to, $"{from:MMMM yyyy}");
+                }
+            }
+        }
+
+        // Applies the chosen report period to the active date range and refreshes
+        // the on-screen data so the preview/export reflects the printed period.
+        private void ApplyPrintPeriod()
+        {
+            var (from, to, label) = GetPrintPeriodRange();
+            _filterFromDate = from;
+            _filterToDate = to;
+            OnPropertyChanged(nameof(FilterFromDate));
+            OnPropertyChanged(nameof(FilterToDate));
+            ShowingText = $"Showing: {label}";
+            LoadData();
+        }
+
         // ── Print (WebView2 preview) ─────────────────────────────────────────────
 
         private string GetActiveReportTitle()
@@ -552,6 +612,10 @@ namespace CruzNeryClinic.ViewModels
         // it in the WebView2 print-preview overlay.
         private void PrintReport()
         {
+            // Scope the data to the chosen report period (Monthly/Quarterly/Annual)
+            // before generating, so both the preview and the export match it.
+            ApplyPrintPeriod();
+
             // Excel export takes a different path: it writes every record (no row
             // cap) straight to an .xlsx file instead of the HTML print preview.
             if (IsExcelExport)
@@ -632,7 +696,8 @@ namespace CruzNeryClinic.ViewModels
                 ws.Cell(1, 1).Style.Font.FontSize = 14;
                 ws.Cell(1, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#223357");
 
-                ws.Cell(2, 1).Value = $"Generated {DateTime.Now:yyyy-MM-dd HH:mm}   •   {dataRows.Count:N0} record(s)";
+                string periodLabel = ShowingText.Replace("Showing: ", string.Empty);
+                ws.Cell(2, 1).Value = $"Period: {periodLabel}   •   Generated {DateTime.Now:yyyy-MM-dd HH:mm}   •   {dataRows.Count:N0} record(s)";
                 ws.Range(2, 1, 2, colCount).Merge();
                 ws.Cell(2, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.FromHtml("#777777");
 
@@ -722,6 +787,23 @@ namespace CruzNeryClinic.ViewModels
                 summary.Add(("Total Revenue", $"₱ {totalRevenue:N2}"));
                 summary.Add(("Patients Billed", TransactionItems.Select(t => t.PatientCode).Distinct().Count().ToString("N0")));
 
+                decimal avgTransaction = TransactionItems.Count > 0 ? totalRevenue / TransactionItems.Count : 0m;
+                summary.Add(("Average Transaction Value", $"₱ {avgTransaction:N2}"));
+
+                var topService = TransactionItems
+                    .GroupBy(t => string.IsNullOrWhiteSpace(t.Service) ? "Unspecified" : t.Service)
+                    .OrderByDescending(g => g.Sum(t => t.Amount))
+                    .FirstOrDefault();
+                if (topService != null)
+                    summary.Add(("Top Service by Revenue", $"{topService.Key} (₱ {topService.Sum(t => (decimal)t.Amount):N2})"));
+
+                var topDay = TransactionItems
+                    .GroupBy(t => t.Date)
+                    .OrderByDescending(g => g.Sum(t => t.Amount))
+                    .FirstOrDefault();
+                if (topDay != null)
+                    summary.Add(("Highest-Revenue Day", $"{topDay.Key} (₱ {topDay.Sum(t => (decimal)t.Amount):N2})"));
+
                 // Subtotals per payment method.
                 foreach (var grp in TransactionItems
                              .GroupBy(t => string.IsNullOrWhiteSpace(t.PaymentMethod) ? "Unspecified" : t.PaymentMethod)
@@ -740,9 +822,19 @@ namespace CruzNeryClinic.ViewModels
                     rows.Append(Tr(i.ItemName, i.CurrentStock.ToString("N0"), i.Threshold.ToString("N0"), i.LastRestocked, i.Status));
 
                 int lowStock = InventoryItems.Count(i => i.CurrentStock <= i.Threshold);
+                int outOfStock = InventoryItems.Count(i => i.CurrentStock == 0);
+                int wellStocked = InventoryItems.Count(i => i.CurrentStock > i.Threshold);
                 summary.Add(("Total Items", InventoryItems.Count.ToString("N0")));
                 summary.Add(("Low / Out of Stock", lowStock.ToString("N0")));
+                summary.Add(("Out of Stock", outOfStock.ToString("N0")));
+                summary.Add(("Well Stocked", wellStocked.ToString("N0")));
                 summary.Add(("Units in Stock", InventoryItems.Sum(i => i.CurrentStock).ToString("N0")));
+
+                var critical = InventoryItems
+                    .OrderBy(i => i.CurrentStock - i.Threshold)
+                    .FirstOrDefault();
+                if (critical != null)
+                    summary.Add(("Most Critical Item", $"{critical.ItemName} ({critical.CurrentStock} / {critical.Threshold})"));
             }
             else if (IsUserActivityLogSelected)
             {
@@ -765,9 +857,24 @@ namespace CruzNeryClinic.ViewModels
                     .Select(g => g.Key)
                     .FirstOrDefault() ?? "—";
 
+                string topModule = ActivityLogItems
+                    .GroupBy(a => string.IsNullOrWhiteSpace(a.Module) ? "Unspecified" : a.Module)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key)
+                    .FirstOrDefault() ?? "—";
+
                 summary.Add(("Total Actions Logged", ActivityLogItems.Count.ToString("N0")));
                 summary.Add(("Most Active User", string.IsNullOrWhiteSpace(mostActive) ? "—" : mostActive));
                 summary.Add(("Most Frequent Action", string.IsNullOrWhiteSpace(topAction) ? "—" : topAction));
+                summary.Add(("Most Active Module", topModule));
+
+                // Action counts per role.
+                foreach (var grp in ActivityLogItems
+                             .GroupBy(a => string.IsNullOrWhiteSpace(a.Role) ? "Unspecified" : a.Role)
+                             .OrderByDescending(g => g.Count()))
+                {
+                    summary.Add(($"{grp.Key} Actions", grp.Count().ToString("N0")));
+                }
             }
             else
             {
@@ -794,10 +901,30 @@ namespace CruzNeryClinic.ViewModels
                     ? busiest.Label
                     : "—";
 
+                string topService = PatientVisitsItems
+                    .Where(p => !string.IsNullOrWhiteSpace(p.Service))
+                    .GroupBy(p => p.Service)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key)
+                    .FirstOrDefault() ?? "—";
+                string topDentist = PatientVisitsItems
+                    .Where(p => !string.IsNullOrWhiteSpace(p.Dentist))
+                    .GroupBy(p => p.Dentist)
+                    .OrderByDescending(g => g.Count())
+                    .Select(g => g.Key)
+                    .FirstOrDefault() ?? "—";
+                int activeDays = PatientVisitsItems.Select(p => p.Date).Distinct().Count();
+                string avgPerDay = activeDays > 0
+                    ? ((double)PatientVisitsItems.Count / activeDays).ToString("N1")
+                    : "0";
+
                 summary.Add(("Total Visits", PatientVisitsItems.Count.ToString("N0")));
                 summary.Add(("Scheduled", scheduled.ToString("N0")));
                 summary.Add(("Walk-in", walkIn.ToString("N0")));
                 summary.Add(("Busiest Day / Period", busiestLabel));
+                summary.Add(("Top Service", topService));
+                summary.Add(("Top Dentist", topDentist));
+                summary.Add(("Avg Visits / Active Day", avgPerDay));
             }
 
             int columnCount = headerCells.Split("<th").Length - 1;

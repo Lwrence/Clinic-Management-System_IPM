@@ -1025,7 +1025,15 @@
                 <StackPanel>
                     <TextBlock Text="Print Options" FontSize="22" FontWeight="Bold" Foreground="#223357" />
                     <TextBlock Margin="0,6,0,14" FontSize="13" Foreground="#777777" TextWrapping="Wrap"
-                               Text="Choose a format and what to include in the report." />
+                               Text="Choose a period, format, and what to include in the report." />
+
+                    <!-- Report period: scopes the report to the whole month, quarter, or year -->
+                    <TextBlock Margin="0,0,0,6" FontSize="13" FontWeight="SemiBold" Foreground="#444444" Text="Report period" />
+                    <ComboBox Width="160" Height="32" Margin="0,0,0,16" HorizontalAlignment="Left"
+                              VerticalContentAlignment="Center"
+                              ItemsSource="{Binding PrintPeriodOptions}"
+                              SelectedItem="{Binding SelectedReportPeriod, Mode=TwoWay}"
+                              ToolTip="Generate a Monthly, Quarterly, or Annual summary report" />
 
                     <!-- Format selector: PDF preview vs. Excel workbook -->
                     <TextBlock Margin="0,0,0,6" FontSize="13" FontWeight="SemiBold" Foreground="#444444" Text="Format" />

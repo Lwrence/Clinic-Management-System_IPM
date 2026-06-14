@@ -230,6 +230,14 @@ namespace CruzNeryClinic.ViewModels
 
         public ObservableCollection<string> TimePeriodOptions { get; }
 
+        // Predefined choices for the walk-in arrival time (12-hour clock; AM/PM
+        // is selected separately via TimePeriodOptions).
+        public List<string> WalkInHourOptions { get; } =
+            Enumerable.Range(1, 12).Select(h => h.ToString("00")).ToList();
+
+        public List<string> WalkInMinuteOptions { get; } =
+            Enumerable.Range(0, 60).Select(m => m.ToString("00")).ToList();
+
         public ObservableCollection<string> TreatmentStageOptions { get; }
 
         public ObservableCollection<string> ProphylaxisSeverityOptions { get; }
@@ -2540,7 +2548,7 @@ namespace CruzNeryClinic.ViewModels
             if (hour == 0)
                 hour = 12;
 
-            WalkInArrivalHourText = hour.ToString();
+            WalkInArrivalHourText = hour.ToString("00");
             WalkInArrivalMinuteText = arrivalTime.Minute.ToString("00");
             WalkInArrivalPeriod = arrivalTime.Hour >= 12 ? "PM" : "AM";
             FormAppointmentTimeText = arrivalTime.ToString("hh:mm tt");

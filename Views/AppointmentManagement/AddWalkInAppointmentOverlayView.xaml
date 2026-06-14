@@ -288,20 +288,20 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <TextBox
+                                <ComboBox
                                     Grid.Column="0"
-                                    MaxLength="2"
-                                    Style="{StaticResource AppointmentTimeSegmentTextBoxStyle}"
-                                    Text="{Binding WalkInArrivalHourText, UpdateSourceTrigger=PropertyChanged}" />
+                                    ItemsSource="{Binding WalkInHourOptions}"
+                                    SelectedItem="{Binding WalkInArrivalHourText, Mode=TwoWay}"
+                                    Style="{StaticResource AppointmentTimePeriodComboBoxStyle}" />
 
                                 <Border
                                     Grid.Column="1"
                                     BorderBrush="#E5E7EB"
                                     BorderThickness="1,0,1,0">
-                                    <TextBox
-                                        MaxLength="2"
-                                        Style="{StaticResource AppointmentTimeSegmentTextBoxStyle}"
-                                        Text="{Binding WalkInArrivalMinuteText, UpdateSourceTrigger=PropertyChanged}" />
+                                    <ComboBox
+                                        ItemsSource="{Binding WalkInMinuteOptions}"
+                                        SelectedItem="{Binding WalkInArrivalMinuteText, Mode=TwoWay}"
+                                        Style="{StaticResource AppointmentTimePeriodComboBoxStyle}" />
                                 </Border>
 
                                 <ComboBox
