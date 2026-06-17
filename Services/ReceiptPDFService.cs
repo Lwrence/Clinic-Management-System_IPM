@@ -37,71 +37,64 @@ namespace CruzNeryClinic.Services
             {
                 container.Page(page =>
                 {
+                    // Keep a normal portrait A4 sheet, but the (compact) content only
+                    // fills the top half so the page can be cut/torn in half.
                     page.Size(PageSizes.A4);
-                    page.Margin(36);
-                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+                    page.Margin(18);
+                    page.DefaultTextStyle(x => x.FontSize(8).FontFamily("Arial"));
 
                     page.Header().Element(header =>
                     {
-                        header.BorderBottom(1).BorderColor("#222222").PaddingBottom(10).Column(col =>
+                        header.BorderBottom(1).BorderColor("#222222").PaddingBottom(5).Column(col =>
                         {
                             col.Item().Row(row =>
                             {
                                 row.RelativeItem().Column(left =>
                                 {
                                     left.Item().Text(ClinicName)
-                                        .FontSize(18)
+                                        .FontSize(13)
                                         .Bold()
                                         .FontColor("#111111");
 
-                                    left.Item().PaddingTop(2).Text(ClinicOwner)
-                                        .FontSize(9)
+                                    left.Item().PaddingTop(1).Text(ClinicOwner)
+                                        .FontSize(7)
                                         .FontColor("#333333");
 
                                     left.Item().Text(ClinicTin)
-                                        .FontSize(9)
+                                        .FontSize(7)
                                         .FontColor("#333333");
 
                                     left.Item().Text(ClinicAddress)
-                                        .FontSize(9)
+                                        .FontSize(7)
                                         .FontColor("#333333");
                                 });
 
-                                row.ConstantItem(190).AlignRight().Column(right =>
+                                row.ConstantItem(150).AlignRight().Column(right =>
                                 {
-                                    right.Item().AlignRight().Text("SERVICE")
-                                        .FontSize(12)
+                                    right.Item().AlignRight().Text("SERVICE INVOICE")
+                                        .FontSize(14)
                                         .Bold()
                                         .FontColor("#111111");
 
-                                    right.Item().AlignRight().Text("INVOICE")
-                                        .FontSize(24)
-                                        .Bold()
-                                        .FontColor("#111111");
-
-                                    right.Item().PaddingTop(4).Text($"Invoice No.: {receipt.ReceiptNumber}")
-                                        .FontSize(10)
+                                    right.Item().PaddingTop(2).Text($"Invoice No.: {receipt.ReceiptNumber}")
+                                        .FontSize(8)
                                         .Bold()
                                         .FontColor("#111111");
 
                                     right.Item().Text($"Date: {receipt.TransactionDateDisplay}")
-                                        .FontSize(10)
+                                        .FontSize(8)
                                         .FontColor("#333333");
 
-                                    right.Item().PaddingTop(4).Text("[x] Cash Sales")
-                                        .FontSize(9)
-                                        .FontColor("#333333");
-
-                                    right.Item().Text("[ ] Charge Sales")
-                                        .FontSize(9)
+                                    right.Item().PaddingTop(2).Text("[x] Cash Sales    [ ] Charge Sales")
+                                        .FontSize(7)
                                         .FontColor("#333333");
                                 });
                             });
                         });
                     });
-                    page.Content().PaddingTop(24).Column(col =>
+                    page.Content().PaddingTop(8).Column(col =>
                     {
-                        col.Spacing(18);
+                        col.Spacing(6);
 
                         col.Item().Row(row =>
                         {
@@ -112,12 +105,11 @@ namespace CruzNeryClinic.Services
                                     "SOLD TO",
                                     $"Customer / Patient Name: {receipt.PatientName}\n" +
                                     $"Patient ID: {receipt.PatientCode}\n" +
-                                    $"TIN: N/A\n" +
-                                    $"Business Address: N/A"
+                                    $"TIN: N/A    Business Address: N/A"
                                 );
                             });
 
-                            row.ConstantItem(24);
+                            row.ConstantItem(12);
 
                             row.RelativeItem().Element(box =>
                             {
@@ -131,7 +123,7 @@ namespace CruzNeryClinic.Services
                             });
                         });
                         col.Item().Text("Invoice Items")
-                            .FontSize(15)
+                            .FontSize(10)
                             .Bold()
                             .FontColor("#333333");
 
@@ -193,8 +185,8 @@ namespace CruzNeryClinic.Services
                             }
                         });
 
-                        col.Item().PaddingTop(4).Text("Payment History")
-                            .FontSize(15)
+                        col.Item().PaddingTop(2).Text("Payment History")
+                            .FontSize(10)
                             .Bold()
                             .FontColor("#333333");
 
@@ -246,7 +238,7 @@ namespace CruzNeryClinic.Services
                             }
                         });
 
-                        col.Item().AlignRight().Width(260).Table(table =>
+                        col.Item().AlignRight().Width(200).Table(table =>
                         {
                             table.ColumnsDefinition(columns =>
                             {
@@ -270,49 +262,54 @@ namespace CruzNeryClinic.Services
 
                         if (!string.IsNullOrWhiteSpace(receipt.Notes))
                         {
-                            col.Item().PaddingTop(8).Column(notes =>
+                            col.Item().PaddingTop(2).Column(notes =>
                             {
-                                notes.Item().Text("Notes").Bold();
-                                notes.Item().Text(receipt.Notes).FontSize(10).FontColor("#444444");
+                                notes.Item().Text("Notes").Bold().FontSize(8);
+                                notes.Item().Text(receipt.Notes).FontSize(7).FontColor("#444444");
                             });
                         }
-                    });
 
-                    page.Footer().Column(footer =>
-                    {
-                        footer.Item().PaddingTop(8).BorderTop(1).BorderColor("#CCCCCC").PaddingTop(6).Row(row =>
+                        // Authority / BIR details kept inside the content (not page.Footer)
+                        // so the whole receipt stays within the top half of the sheet.
+                        col.Item().PaddingTop(4).BorderTop(1).BorderColor("#CCCCCC").PaddingTop(3).Row(row =>
                         {
                             row.RelativeItem().Column(left =>
                             {
                                 left.Item().Text("PERMIT / AUTHORITY DETAILS")
-                                    .FontSize(7)
+                                    .FontSize(6)
                                     .Bold()
                                     .FontColor("#333333");
 
                                 left.Item().Text(AuthorityToPrint)
-                                    .FontSize(7)
+                                    .FontSize(6)
                                     .FontColor("#555555");
 
                                 left.Item().Text(AuthorityDateIssued)
-                                    .FontSize(7)
+                                    .FontSize(6)
                                     .FontColor("#555555");
 
                                 left.Item().Text(ApprovedSeries)
-                                    .FontSize(7)
+                                    .FontSize(6)
                                     .FontColor("#555555");
                             });
 
                             row.RelativeItem().AlignRight().Column(right =>
                             {
                                 right.Item().Text("This invoice was generated by Dental Clinic Management System.")
-                                    .FontSize(7)
+                                    .FontSize(6)
                                     .FontColor("#777777");
 
-                                right.Item().PaddingTop(4).Text("Verify ATP and BIR details before production use.")
-                                    .FontSize(7)
+                                right.Item().PaddingTop(2).Text("Verify ATP and BIR details before production use.")
+                                    .FontSize(6)
                                     .FontColor("#777777");
                             });
                         });
+
+                        // Cut/tear indicator marking the bottom of the receipt.
+                        col.Item().PaddingTop(10)
+                            .BorderBottom(1).BorderColor("#999999")
+                            .DefaultTextStyle(x => x.FontSize(7).FontColor("#999999"))
+                            .Text("✂  - - - - - - - - - - - - - - - - cut here - - - - - - - - - - - - - - - -");
                     });
                 });
             }).GeneratePdf(filePath);
@@ -336,8 +333,8 @@ namespace CruzNeryClinic.Services
         {
             container.Column(col =>
             {
-                col.Item().Background("#F3F7FA").Padding(8).Text(title).Bold().FontSize(12);
-                col.Item().Border(1).BorderColor("#DDDDDD").Padding(10).Text(body).FontSize(10);
+                col.Item().Background("#F3F7FA").Padding(4).Text(title).Bold().FontSize(9);
+                col.Item().Border(1).BorderColor("#DDDDDD").Padding(5).Text(body).FontSize(8);
             });
         }
 
@@ -347,7 +344,7 @@ namespace CruzNeryClinic.Services
                 .Background("#EEF3FA")
                 .Border(1)
                 .BorderColor("#DDDDDD")
-                .Padding(6);
+                .Padding(3);
         }
 
         private static IContainer TableBodyCell(IContainer container)
@@ -355,7 +352,7 @@ namespace CruzNeryClinic.Services
             return container
                 .Border(1)
                 .BorderColor("#E0E0E0")
-                .Padding(6);
+                .Padding(3);
         }
 
         private static void SummaryRow(TableDescriptor table, string label, string value, bool isBold = false)
@@ -369,10 +366,10 @@ namespace CruzNeryClinic.Services
             IContainer styled = container
                 .BorderBottom(1)
                 .BorderColor("#DDDDDD")
-                .PaddingVertical(6);
+                .PaddingVertical(3);
 
             return styled.DefaultTextStyle(x =>
-                isBold ? x.Bold().FontSize(11) : x.FontSize(10)
+                isBold ? x.Bold().FontSize(9) : x.FontSize(8)
             );
         }
 

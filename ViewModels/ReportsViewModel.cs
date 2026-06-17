@@ -174,13 +174,27 @@ namespace CruzNeryClinic.ViewModels
         }
 
         public ObservableCollection<string> PrintRowOptions { get; } =
-            new() { "25", "50", "100", "All" };
+            new() { "25", "50", "100", "All", "Custom" };
 
         private string _selectedPrintRowLimit = "50";
         public string SelectedPrintRowLimit
         {
             get => _selectedPrintRowLimit;
-            set => SetProperty(ref _selectedPrintRowLimit, value);
+            set
+            {
+                if (SetProperty(ref _selectedPrintRowLimit, value))
+                    OnPropertyChanged(nameof(IsCustomRowLimit));
+            }
+        }
+
+        // True when the user picks "Custom" in the rows dropdown; reveals the number box.
+        public bool IsCustomRowLimit => SelectedPrintRowLimit == "Custom";
+
+        private string _customRowLimit = "200";
+        public string CustomRowLimit
+        {
+            get => _customRowLimit;
+            set => SetProperty(ref _customRowLimit, value);
         }
 
         private bool _printIncludeCharts = true;
@@ -205,8 +219,19 @@ namespace CruzNeryClinic.ViewModels
         }
 
         // Resolves SelectedPrintRowLimit to a row cap (int.MaxValue = no cap).
-        private int PrintRowLimit =>
-            int.TryParse(SelectedPrintRowLimit, out int n) ? n : int.MaxValue;
+        // "Custom" uses CustomRowLimit; an invalid/blank custom value means no cap.
+        private int PrintRowLimit
+        {
+            get
+            {
+                if (IsCustomRowLimit)
+                    return int.TryParse(CustomRowLimit, out int custom) && custom > 0
+                        ? custom
+                        : int.MaxValue;
+
+                return int.TryParse(SelectedPrintRowLimit, out int n) ? n : int.MaxValue;
+            }
+        }
 
         // ── Report period (chosen in the Print options dialog) ──────────────────
         // Lets a report be generated for the whole month, quarter, or year that

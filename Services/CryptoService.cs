@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Globalization;
+using CruzNeryClinic.Data;
 
 namespace CruzNeryClinic.Services
 {
@@ -146,28 +147,53 @@ namespace CruzNeryClinic.Services
             if (rawKey == null || rawKey.Length != KeySizeBytes)
                 throw new InvalidOperationException("Invalid AES key size.");
 
-            string keyFilePath = GetKeyFilePath();
-
-            SaveProtectedKey(keyFilePath, rawKey);
-        }        
+            if (DatabaseService.IsSharedDatabase)
+                SaveSharedKey(GetSharedKeyFilePath(), rawKey);
+            else
+                SaveLocalKey(GetLocalKeyFilePath(), rawKey);
+        }
         #endregion
 
         #region Key Management
 
         private static byte[] GetOrCreateKey()
         {
-            string keyFilePath = GetKeyFilePath();
+            // LAN-shared mode: the key lives next to the shared database so every
+            // laptop encrypts/decrypts with the same key. It is stored as raw bytes
+            // (not DPAPI-protected) because DPAPI keys are tied to one machine/user
+            // and would not be portable across the laptops.
+            if (DatabaseService.IsSharedDatabase)
+            {
+                string sharedKeyPath = GetSharedKeyFilePath();
+
+                if (File.Exists(sharedKeyPath))
+                    return LoadSharedKey(sharedKeyPath);
+
+                // First run in shared mode: seed the shared key from this machine's
+                // existing local key (so records it already created stay decryptable).
+                // Run the SERVER first after updating so its data is preserved.
+                string localKeyPath = GetLocalKeyFilePath();
+                byte[] seedKey = File.Exists(localKeyPath)
+                    ? LoadLocalKey(localKeyPath)
+                    : RandomNumberGenerator.GetBytes(KeySizeBytes);
+
+                SaveSharedKey(sharedKeyPath, seedKey);
+                return seedKey;
+            }
+
+            // Standalone (default) mode: keep the secure per-user DPAPI key as before.
+            string keyFilePath = GetLocalKeyFilePath();
 
             if (File.Exists(keyFilePath))
-                return LoadProtectedKey(keyFilePath);
+                return LoadLocalKey(keyFilePath);
 
             byte[] key = RandomNumberGenerator.GetBytes(KeySizeBytes);
-            SaveProtectedKey(keyFilePath, key);
+            SaveLocalKey(keyFilePath, key);
 
             return key;
         }
 
-        private static void SaveProtectedKey(string keyFilePath, byte[] key)
+        private static void SaveLocalKey(string keyFilePath, byte[] key)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(keyFilePath)!);
 
@@ -180,7 +206,7 @@ namespace CruzNeryClinic.Services
             File.WriteAllBytes(keyFilePath, protectedKey);
         }
 
-        private static byte[] LoadProtectedKey(string keyFilePath)
+        private static byte[] LoadLocalKey(string keyFilePath)
         {
             byte[] protectedKey = File.ReadAllBytes(keyFilePath);
 
@@ -191,7 +217,25 @@ namespace CruzNeryClinic.Services
             );
         }
 
-        private static string GetKeyFilePath()
+        private static void SaveSharedKey(string keyFilePath, byte[] key)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(keyFilePath)!);
+
+            // Raw bytes so any laptop reading the shared folder uses the identical key.
+            File.WriteAllBytes(keyFilePath, key);
+        }
+
+        private static byte[] LoadSharedKey(string keyFilePath)
+        {
+            byte[] key = File.ReadAllBytes(keyFilePath);
+
+            if (key.Length != KeySizeBytes)
+                throw new InvalidOperationException("Shared encryption key is invalid or corrupted.");
+
+            return key;
+        }
+
+        private static string GetLocalKeyFilePath()
         {
             string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
@@ -201,6 +245,13 @@ namespace CruzNeryClinic.Services
                 "Security",
                 "patient_data.key"
             );
+        }
+
+        private static string GetSharedKeyFilePath()
+        {
+            // Sits in the same shared folder as the database (e.g. C:\ClinicDB on the
+            // server / \\SERVER\ClinicDB on the client).
+            return Path.Combine(DatabaseService.DatabaseDirectory, "patient_data.key");
         }
 
         #endregion

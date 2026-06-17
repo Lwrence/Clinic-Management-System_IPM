@@ -1061,6 +1061,10 @@
                                   ItemsSource="{Binding PrintRowOptions}"
                                   SelectedItem="{Binding SelectedPrintRowLimit, Mode=TwoWay}"
                                   ToolTip="Maximum number of detail rows to print" />
+                        <TextBox Width="80" Height="32" Margin="8,0,0,0" VerticalContentAlignment="Center"
+                                 Text="{Binding CustomRowLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Enter a custom number of rows to print"
+                                 Visibility="{Binding IsCustomRowLimit, Converter={StaticResource BoolToVisibilityConverter}}" />
                         </StackPanel>
                     </StackPanel>
 
