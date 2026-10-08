@@ -118,6 +118,16 @@ namespace CruzNeryClinic.ViewModels
         {
             ManualTopics.Add(new HelpManualTopic
             {
+                Title = "Email Notifications and Digital Receipts",
+                Content = "Open Email Notifications to review pending, sending, sent, failed, and skipped messages. Add an optional email address in a patient record and explicitly confirm the patient's agreement to receive email updates. Scheduled appointments create confirmations; rescheduling and cancellation create notices; payments create PDF receipt emails. An administrator configures Gmail settings using the clinic Gmail address and a 16-letter app password generated after enabling Google 2-Step Verification. Saving the settings designates that computer as the shared LAN sender. Keep the app open on that computer with internet access for automatic delivery and reminders. Clinic records continue to save locally while offline. Pending messages retry automatically; after five unsuccessful attempts, select the failed message and use Retry failed. Send pending checks delivery immediately, and Refresh updates the displayed results. Older appointment notices, expired appointments, and changed patient email authorization are skipped. Sent means Gmail accepted the message, not that the patient read it."
+            });
+            Faqs.Add(new FaqItem
+            {
+                Question = "Does a LAN-based clinic system need internet for email?",
+                Answer = "Only the designated Gmail sending computer needs internet to deliver notifications. The shared patient database stays on the LAN. If internet is unavailable, messages remain in the local queue and retry later. Keep the application open on the sending computer for automatic delivery."
+            });
+            ManualTopics.Add(new HelpManualTopic
+            {
                 Title = "Data Migration and Validation",
                 Content = "Authorized clinic staff can open Data Migration and follow three steps: Upload, Review, and Confirm & Save. Use Select Word File, check the filename, then click Extract Records. Review the patient list and editable details, complete missing information, check duplicate matches, and approve each record to save. Continue to confirmation and explicitly confirm before Save Approved Records. Only selected, approved information is saved. After saving, use View Results or Start New Migration. The top-right Migration History button shows saved, failed, and rejected outcomes. Return to Migration keeps the current file and drafts; final confirmation must be checked again. Editing a patient field clears its approval."
             });

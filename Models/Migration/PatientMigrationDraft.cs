@@ -114,6 +114,10 @@ public class PatientMigrationDraft : BaseViewModel
     public string MiddleName { get => middleName; set => Edit(ref middleName, value); }
     private string lastName = "";
     public string LastName { get => lastName; set => Edit(ref lastName, value); }
+    private string emailAddress = "";
+    public string EmailAddress { get => emailAddress; set => Edit(ref emailAddress, value); }
+    private bool emailNotificationsEnabled;
+    public bool EmailNotificationsEnabled { get => emailNotificationsEnabled; set => Edit(ref emailNotificationsEnabled, value); }
     private string phoneNumber = "";
     public string PhoneNumber { get => phoneNumber; set => Edit(ref phoneNumber, value); }
     private string birthDateText = "";

@@ -338,6 +338,13 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Command="{Binding EmailNotificationsCommand}" Style="{StaticResource SidebarMenuButtonStyle}"
+                            Background="{Binding EmailNotificationsBackground}" Foreground="{Binding EmailNotificationsForeground}">
+                        <StackPanel Orientation="Horizontal">
+                            <fa:IconBlock Icon="Envelope" Width="32" FontSize="18" Foreground="{Binding EmailNotificationsForeground}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Email Notifications" FontSize="16" FontWeight="SemiBold" Foreground="{Binding EmailNotificationsForeground}" VerticalAlignment="Center" Margin="18,0,0,0"/>
+                        </StackPanel>
+                    </Button>
                     <!-- Help: available to all roles -->
                     <Button Command="{Binding HelpCommand}"
                             Style="{StaticResource SidebarMenuButtonStyle}"

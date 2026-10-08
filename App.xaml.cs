@@ -22,6 +22,7 @@ namespace CruzNeryClinic
                 // Initialize the database before showing MainWindow.
                 DatabaseInitializer.Initialize();
                 TryRunAutoBackup();
+                Services.Email.EmailDeliveryService.Current.Start();
 
                 base.OnStartup(e);
             }
@@ -37,6 +38,12 @@ namespace CruzNeryClinic
             ShowAndSaveError(e.Exception, "Dispatcher UI Error");
             e.Handled = true;
             Shutdown();
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            Services.Email.EmailDeliveryService.Current.Dispose();
+            base.OnExit(e);
         }
 
         private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)

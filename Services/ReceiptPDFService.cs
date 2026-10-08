@@ -33,7 +33,14 @@ namespace CruzNeryClinic.Services
             string safeReceiptNumber = MakeSafeFileName(receipt.ReceiptNumber);
             string filePath = Path.Combine(receiptsFolder, $"{safeReceiptNumber}.pdf");
 
-            Document.Create(container =>
+            File.WriteAllBytes(filePath, GenerateReceiptBytes(receipt));
+            return filePath;
+        }
+
+        public static byte[] GenerateReceiptBytes(BillingReceiptDetail receipt)
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+            return Document.Create(container =>
             {
                 container.Page(page =>
                 {
@@ -312,9 +319,7 @@ namespace CruzNeryClinic.Services
                             .Text("✂  - - - - - - - - - - - - - - - - cut here - - - - - - - - - - - - - - - -");
                     });
                 });
-            }).GeneratePdf(filePath);
-
-            return filePath;
+            }).GeneratePdf();
         }
 
         public static void OpenPdf(string filePath)

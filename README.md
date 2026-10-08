@@ -1,5 +1,31 @@
 # Cruz-Nery Dental Clinic Management System
 
+## Email Notifications and Digital Receipts
+
+The Email Notifications module sends appointment confirmations, reminders, rescheduling and cancellation notices, and PDF receipts for recorded payments. Staff can review the latest 200 tracked messages, refresh their status, retry a selected failed message, and check pending delivery. The full delivery history remains in the shared SQLite database.
+
+Gmail setup:
+
+1. On the computer that will send clinic emails, sign in to the clinic app as an administrator.
+2. Enable Google 2-Step Verification for the clinic Gmail account and create a [Google app password](https://support.google.com/accounts/answer/185833). Use that 16-letter password, rather than the normal Gmail password. Some Google account policies do not allow app passwords.
+3. Open **Email Notifications → Gmail settings**. Enter the clinic Gmail address, sender name, app password, and reminder lead time (24 hours by default).
+4. Check **Enable Gmail delivery from this computer**, then save. This designates this computer as the sender for all clients using the same clinic database. The app password is protected with Windows DPAPI under the current Windows account; configure it again if the sending Windows account or computer changes.
+5. Add the patient's optional email address in Add/Update Patient or migration review, and explicitly check the patient's email authorization. Existing patients start with no email address and email delivery disabled for their records. Privacy consent and active patient status are also required.
+6. Use **Send pending** to check delivery immediately, or keep the app open for the automatic check every minute.
+
+The patient database and email queue stay on the LAN. Only the designated sending computer needs internet access to Gmail (`smtp.gmail.com:587`, with required STARTTLS). Appointment and payment saving do not wait for Gmail. Each change and its notification enter the database in the same transaction. Unsent messages persist when the app closes or the connection fails; interrupted sending claims are recovered after five minutes.
+
+Temporary delivery failures retry with increasing delays. After five unsuccessful attempts, a message becomes **Failed** and staff can use **Retry failed** after correcting the connection or settings. Authentication failures require checking the Gmail app password before retrying. A newer appointment update replaces older unsent notices; expired appointment confirmations/reminders and withdrawn patient email authorization are marked **Skipped**. **Sent** means Gmail accepted the email; it does not confirm inbox delivery or reading. The process cannot guarantee exactly-once SMTP delivery if the app stops after Gmail accepts a message but before the sent status is saved.
+
+PDF receipt emails contain the invoice/payment snapshot captured when that payment was saved, using the existing printable receipt layout. Appointment emails contain the patient name and schedule, without clinical notes or treatment details. Recipients, payloads, and stored errors are encrypted using the clinic's existing encryption key. The Gmail app password is not stored in the shared database or its backups. Sending and reminder checks require the clinic app to remain open on the designated computer; this implementation does not install a Windows service.
+
+Verification commands (temporary databases and simulated email transport; no real email is sent):
+
+```powershell
+dotnet run --project Tests/EmailNotifications.Checks/EmailNotifications.Checks.csproj --artifacts-path buildcheck/email-notifications
+dotnet run --project Tests/PatientMigration.Checks/PatientMigration.Checks.csproj --artifacts-path buildcheck/email-migration-regression
+```
+
 ## Publishing and Installer Guide
 
 This guide explains how to publish the WPF application and package it into a Windows installer using Inno Setup.

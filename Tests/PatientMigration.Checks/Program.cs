@@ -149,7 +149,7 @@ INSERT INTO Services VALUES (1, 'Consultation', 300, 1), (2, 'Extraction', 500, 
  (3, 'Prophylaxis', 800, 1), (4, 'Inactive Service', 100, 0);
 CREATE TABLE Patients (
  PatientId INTEGER PRIMARY KEY AUTOINCREMENT, PatientCode TEXT UNIQUE, FirstName TEXT, MiddleName TEXT,
- LastName TEXT, PhoneNumber TEXT, BirthDate TEXT, Gender TEXT, Address TEXT, IsPWD INTEGER,
+ LastName TEXT, EmailAddress TEXT NOT NULL DEFAULT '', EmailNotificationsEnabled INTEGER NOT NULL DEFAULT 0, PhoneNumber TEXT, BirthDate TEXT, Gender TEXT, Address TEXT, IsPWD INTEGER,
  IsSeniorCitizen INTEGER, InitialTreatment TEXT, HasDataPrivacyConsent INTEGER, DataPrivacyConsentAt TEXT,
  DataPrivacyConsentVersion TEXT, IsActive INTEGER, CreatedAt TEXT);
 CREATE TABLE PatientHistories (

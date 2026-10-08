@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
 using CruzNeryClinic.Models;
 using CruzNeryClinic.Repositories;
+using CruzNeryClinic.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -48,6 +49,10 @@ namespace CruzNeryClinic.ViewModels
         private string formMiddleName = string.Empty;
         private string formLastName = string.Empty;
         private string formPhoneNumber = string.Empty;
+        private string formEmailAddress = string.Empty;
+        private bool formEmailNotificationsEnabled;
+        public string FormEmailAddress { get => formEmailAddress; set => SetProperty(ref formEmailAddress, value); }
+        public bool FormEmailNotificationsEnabled { get => formEmailNotificationsEnabled; set => SetProperty(ref formEmailNotificationsEnabled, value); }
         private const int MinimumPatientAge = 1;
         private DateTime? formDateOfBirth = DateTime.Today.AddYears(-MinimumPatientAge);
         private int? selectedBirthDay;
@@ -1223,6 +1228,12 @@ namespace CruzNeryClinic.ViewModels
                 return false;
             }
 
+            if (!string.IsNullOrWhiteSpace(FormEmailAddress) && !EmailAddressValidation.IsValid(FormEmailAddress))
+            {
+                ShowPatientFormError("Enter a valid email address or leave the optional email field blank.");
+                return false;
+            }
+
             if (!FormDateOfBirth.HasValue)
             {
                 ShowPatientFormError("Date of birth is required.");
@@ -1290,6 +1301,8 @@ namespace CruzNeryClinic.ViewModels
                 MiddleName = FormMiddleName.Trim(),
                 LastName = FormLastName.Trim(),
                 PhoneNumber = FormPhoneNumber.Trim(),
+                EmailAddress = FormEmailAddress.Trim(),
+                EmailNotificationsEnabled = FormEmailNotificationsEnabled,
                 BirthDate = FormDateOfBirth!.Value.Date,
                 Gender = FormGender.Trim(),
                 Address = FormAddress.Trim(),
@@ -1317,6 +1330,8 @@ namespace CruzNeryClinic.ViewModels
             FormMiddleName = patient.MiddleName;
             FormLastName = patient.LastName;
             FormPhoneNumber = patient.PhoneNumber;
+            FormEmailAddress = patient.EmailAddress;
+            FormEmailNotificationsEnabled = patient.EmailNotificationsEnabled;
             FormDateOfBirth = patient.BirthDate;
             FormGender = patient.Gender;
             FormIsPwd = patient.IsPwd;
@@ -1493,6 +1508,8 @@ namespace CruzNeryClinic.ViewModels
             FormMiddleName = string.Empty;
             FormLastName = string.Empty;
             FormPhoneNumber = string.Empty;
+            FormEmailAddress = string.Empty;
+            FormEmailNotificationsEnabled = false;
             FormDateOfBirth = DateTime.Today.AddYears(-MinimumPatientAge);
             CalculatedAge = MinimumPatientAge;
             OnPropertyChanged(nameof(CalculatedAgeDisplay));

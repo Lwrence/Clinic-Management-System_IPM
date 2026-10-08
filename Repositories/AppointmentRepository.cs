@@ -10,13 +10,20 @@ namespace CruzNeryClinic.Repositories
 {
     public class AppointmentRepository
     {
+        private readonly Func<SqliteConnection> getConnection;
+        private readonly Func<string?, string> encrypt, decrypt;
+        private readonly Action<string, string, string> audit;
+        public AppointmentRepository() : this(DatabaseService.GetConnection, CryptoService.EncryptString, CryptoService.DecryptString, ActivityLogService.Log) { }
+        public AppointmentRepository(Func<SqliteConnection> connection, Func<string?, string> encrypt, Func<string?, string> decrypt, Action<string, string, string> audit)
+        { getConnection = connection; this.encrypt = encrypt; this.decrypt = decrypt; this.audit = audit; }
+
         #region Appointment List
 
         public List<AppointmentListItem> GetAppointmentListItems()
         {
             List<AppointmentListItem> appointments = new();
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -102,7 +109,7 @@ WHERE AppointmentDate = @Today
 
         private int CountByQuery(string sql)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -123,7 +130,7 @@ WHERE AppointmentDate = @Today
             if (string.IsNullOrWhiteSpace(searchText))
                 return patients;
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -183,7 +190,7 @@ LIMIT 10;";
             DateTime startDate = new DateTime(year, month, 1);
             DateTime endDate = startDate.AddMonths(1);
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -219,7 +226,7 @@ LIMIT 10;";
 
         public List<AppointmentServiceOption> GetActiveServices()
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
             return GetActiveServices(connection);
         }
@@ -256,7 +263,7 @@ ORDER BY ServiceName ASC;";
         {
             List<AppointmentDentistOption> dentists = new();
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -299,7 +306,7 @@ ORDER BY LastName ASC, FirstName ASC;";
 
         public AppointmentPatientMedicalAlert GetPatientMedicalAlert(int patientId)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -325,11 +332,11 @@ ORDER BY LastName ASC, FirstName ASC;";
             return new AppointmentPatientMedicalAlert
             {
                 HasMedicalCondition = SafeGetInt(reader, "HasMedicalCondition") == 1,
-                MedicalConditionNotes = CryptoService.DecryptString(SafeGetString(reader, "MedicalConditionNotes")),
-                AllergyNotes = CryptoService.DecryptString(SafeGetString(reader, "AllergyNotes")),
-                CurrentMedication = CryptoService.DecryptString(SafeGetString(reader, "CurrentMedication")),
+                MedicalConditionNotes = decrypt(SafeGetString(reader, "MedicalConditionNotes")),
+                AllergyNotes = decrypt(SafeGetString(reader, "AllergyNotes")),
+                CurrentMedication = decrypt(SafeGetString(reader, "CurrentMedication")),
                 RequiresMedicalClearance = SafeGetInt(reader, "RequiresMedicalClearance") == 1,
-                ClearanceNotes = CryptoService.DecryptString(SafeGetString(reader, "ClearanceNotes"))
+                ClearanceNotes = decrypt(SafeGetString(reader, "ClearanceNotes"))
             };
         }
 
@@ -342,7 +349,7 @@ ORDER BY LastName ASC, FirstName ASC;";
             TimeSpan appointmentTime,
             int? ignoredAppointmentId = null)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -369,7 +376,7 @@ ORDER BY LastName ASC, FirstName ASC;";
             TimeSpan appointmentTime,
             int? ignoredAppointmentId = null)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -397,7 +404,7 @@ ORDER BY LastName ASC, FirstName ASC;";
             TimeSpan appointmentTime,
             int? ignoredAppointmentId = null)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -425,10 +432,12 @@ ORDER BY LastName ASC, FirstName ASC;";
 
         public int AddAppointment(Appointment appointment)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
+            using SqliteTransaction transaction = connection.BeginTransaction();
             using SqliteCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
             command.CommandText = @"
 INSERT INTO Appointments (
     PatientId,
@@ -496,8 +505,10 @@ SELECT last_insert_rowid();";
             command.Parameters.AddWithValue("@CreatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
             int newAppointmentId = Convert.ToInt32(command.ExecuteScalar());
+            EmailNotificationRepository.QueueAppointment(connection, transaction, newAppointmentId, "Confirmation", encrypt, decrypt);
+            transaction.Commit();
 
-            ActivityLogService.Log(
+            audit(
                 "Create",
                 "Appointment",
                 $"Created {appointment.AppointmentType} appointment for service '{appointment.ServiceName}' with {appointment.DentistName} on {appointment.AppointmentDate:yyyy-MM-dd} {appointment.AppointmentTime:hh\\:mm}");
@@ -508,7 +519,7 @@ SELECT last_insert_rowid();";
         // Records the path of a stored teeth photo against an appointment.
         public void AddAppointmentImage(int appointmentId, string filePath)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -528,7 +539,7 @@ VALUES (@AppointmentId, @FilePath, @CreatedAt);";
         {
             List<AppointmentImageItem> images = new();
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -558,7 +569,7 @@ ORDER BY AppointmentImageId DESC;";
         {
             string? filePath = null;
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using (SqliteCommand selectCommand = connection.CreateCommand())
@@ -588,7 +599,7 @@ ORDER BY AppointmentImageId DESC;";
 
         public AppointmentListItem? GetAppointmentListItemById(int appointmentId)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -642,10 +653,12 @@ ORDER BY AppointmentImageId DESC;";
 
         public void RescheduleAppointment(Appointment appointment)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
+            using SqliteTransaction transaction = connection.BeginTransaction();
             using SqliteCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
             command.CommandText = @"
         UPDATE Appointments
         SET
@@ -657,6 +670,7 @@ ORDER BY AppointmentImageId DESC;";
             AppointmentTime = @AppointmentTime,
             Notes = @Notes,
             Status = 'Scheduled',
+            EmailRevision = EmailRevision + 1,
             Priority = 'Scheduled',
             ArrivalTime = NULL,
             IsUrgent = 0,
@@ -673,9 +687,11 @@ ORDER BY AppointmentImageId DESC;";
             command.Parameters.AddWithValue("@UpdatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             command.Parameters.AddWithValue("@AppointmentId", appointment.AppointmentId);
 
-            command.ExecuteNonQuery();
+            if (command.ExecuteNonQuery() > 0)
+                EmailNotificationRepository.QueueAppointment(connection, transaction, appointment.AppointmentId, "Rescheduled", encrypt, decrypt);
+            transaction.Commit();
 
-            ActivityLogService.Log(
+            audit(
                 "Update",
                 "Appointment",
                 $"Rescheduled appointment #{appointment.AppointmentId} to {appointment.AppointmentDate:yyyy-MM-dd} {appointment.AppointmentTime:hh\\:mm}");
@@ -687,7 +703,7 @@ ORDER BY AppointmentImageId DESC;";
 
         public bool TreatmentRecordExistsForAppointment(int appointmentId)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -703,7 +719,7 @@ ORDER BY AppointmentImageId DESC;";
 
         public void CreateTreatmentRecordFromAppointment(int appointmentId, string treatmentNotes)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteTransaction transaction = connection.BeginTransaction();
@@ -762,7 +778,7 @@ ORDER BY AppointmentImageId DESC;";
         FROM Appointments
         WHERE AppointmentId = @AppointmentId;";
                 
-                string encryptedTreatmentNotes = CryptoService.EncryptString(treatmentNotes.Trim());
+                string encryptedTreatmentNotes = encrypt(treatmentNotes.Trim());
                 
                 insertCommand.Parameters.AddWithValue("@AppointmentId", appointmentId);
                 insertCommand.Parameters.AddWithValue("@TreatmentNotes", encryptedTreatmentNotes);
@@ -808,7 +824,7 @@ ORDER BY AppointmentImageId DESC;";
 
         public bool StartTreatment(int appointmentId)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteTransaction transaction = connection.BeginTransaction();
@@ -855,7 +871,7 @@ WHERE AppointmentId = @AppointmentId;";
 
                 transaction.Commit();
 
-                ActivityLogService.Log(
+                audit(
                     "Update",
                     "Appointment",
                     $"Started treatment for appointment #{appointmentId}");
@@ -886,7 +902,7 @@ WHERE AppointmentId = @AppointmentId;";
             DateTime? followUpDate,
             string treatmentDetails)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -923,7 +939,7 @@ WHERE AppointmentId = @AppointmentId
 
         public void ToggleUrgent(int appointmentId, bool isUrgent)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -942,7 +958,7 @@ WHERE AppointmentId = @AppointmentId;";
 
             command.ExecuteNonQuery();
 
-            ActivityLogService.Log(
+            audit(
                 "Update",
                 "Appointment",
                 $"Marked appointment #{appointmentId} as {(isUrgent ? "urgent" : "not urgent")}");
@@ -954,18 +970,21 @@ WHERE AppointmentId = @AppointmentId;";
             Action<SqliteCommand> configureParameters)
         {
             string status = GetStatusValue(updateType);
-            string extraSetSql = GetStatusSetClause(updateType);
+            bool cancellation = updateType == AppointmentStatusUpdate.Cancelled;
+            string extraSetSql = GetStatusSetClause(updateType) + (cancellation ? ", EmailRevision = EmailRevision + 1" : "");
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
+            using SqliteTransaction transaction = connection.BeginTransaction();
             using SqliteCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
             command.CommandText = @"
 UPDATE Appointments
 SET
     Status = @Status,
     " + extraSetSql + @"
-WHERE AppointmentId = @AppointmentId;";
+WHERE AppointmentId = @AppointmentId" + (cancellation ? " AND Status <> 'Cancelled'" : "") + ";";
 
             command.AddTextParameter("@Status", status);
             command.AddDateTimeParameter("@UpdatedAt", DateTime.Now);
@@ -973,9 +992,11 @@ WHERE AppointmentId = @AppointmentId;";
 
             configureParameters(command);
 
-            command.ExecuteNonQuery();
+            if (command.ExecuteNonQuery() > 0 && cancellation)
+                EmailNotificationRepository.QueueAppointment(connection, transaction, appointmentId, "Cancellation", encrypt, decrypt);
+            transaction.Commit();
 
-            ActivityLogService.Log(
+            audit(
                 "Update",
                 "Appointment",
                 $"Changed status of appointment #{appointmentId} to '{status}'");

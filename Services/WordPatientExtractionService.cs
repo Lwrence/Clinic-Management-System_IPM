@@ -156,6 +156,7 @@ public class WordPatientExtractionService
         Add("FirstName", "First Name", "Given Name", "Given Names");
         Add("MiddleName", "Middle Name", "Middle Initial");
         Add("LastName", "Last Name", "Surname", "Family Name");
+        Add("EmailAddress", "Email", "Email Address", "E-mail", "E-mail Address", "Patient Email");
         Add("PhoneNumber", "Phone", "Mobile", "Mobile Number", "Contact Number", "Contact No", "Contact", "Mobile No", "Telephone");
         Add("BirthDateText", "Date of Birth", "Birth Date", "Birthday", "DOB");
         Add("Gender", "Sex", "Gender / Sex");

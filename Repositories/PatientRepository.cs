@@ -9,13 +9,19 @@ namespace CruzNeryClinic.Repositories
 {
     public class PatientRepository
     {
+        private readonly Func<SqliteConnection> getConnection;
+        private readonly Func<string?, string> encrypt, decrypt;
+        public PatientRepository() : this(DatabaseService.GetConnection, CryptoService.EncryptString, CryptoService.DecryptString) { }
+        public PatientRepository(Func<SqliteConnection> connection, Func<string?, string> encrypt, Func<string?, string> decrypt)
+        { getConnection = connection; this.encrypt = encrypt; this.decrypt = decrypt; }
+
         #region Patient List and Summary
 
         public List<PatientListItem> GetPatientListItems()
         {
             List<PatientListItem> patients = new();
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -74,7 +80,7 @@ ORDER BY p.PatientId ASC;";
             DateTime monthStart = new(now.Year, now.Month, 1);
             DateTime nextMonthStart = monthStart.AddMonths(1);
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -97,7 +103,7 @@ WHERE IsActive = 1
 
         public Patient? GetPatientById(int patientId)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -110,6 +116,8 @@ SELECT
     p.LastName,
     p.PhoneNumber,
     p.BirthDate,
+    p.EmailAddress,
+    p.EmailNotificationsEnabled,
     p.Gender,
     p.Address,
     p.IsPWD,
@@ -152,14 +160,14 @@ LIMIT 1;";
 
         public int AddPatient(Patient patient)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteTransaction transaction = connection.BeginTransaction();
 
             try
             {
-                int patientId = InsertPatient(connection, transaction, patient, CryptoService.EncryptString);
+                int patientId = InsertPatient(connection, transaction, patient, encrypt);
 
                 transaction.Commit();
                 return patientId;
@@ -188,6 +196,8 @@ LIMIT 1;";
             LastName,
             PhoneNumber,
             BirthDate,
+            EmailAddress,
+            EmailNotificationsEnabled,
             Gender,
             Address,
             IsPWD,
@@ -206,6 +216,8 @@ LIMIT 1;";
             @LastName,
             @PhoneNumber,
             @BirthDate,
+            @EmailAddress,
+            @EmailNotificationsEnabled,
             @Gender,
             @Address,
             @IsPWD,
@@ -225,6 +237,8 @@ LIMIT 1;";
             insertPatientCommand.Parameters.AddWithValue("@MiddleName", patient.MiddleName.Trim());
             insertPatientCommand.Parameters.AddWithValue("@LastName", patient.LastName.Trim());
             insertPatientCommand.Parameters.AddWithValue("@PhoneNumber", encrypt(patient.PhoneNumber.Trim()));
+            insertPatientCommand.Parameters.AddWithValue("@EmailAddress", encrypt(patient.EmailAddress.Trim()));
+            insertPatientCommand.Parameters.AddWithValue("@EmailNotificationsEnabled", patient.EmailNotificationsEnabled ? 1 : 0);
             insertPatientCommand.Parameters.AddWithValue("@BirthDate", patient.BirthDate.ToString("yyyy-MM-dd"));
             insertPatientCommand.Parameters.AddWithValue("@Gender", patient.Gender.Trim());
             insertPatientCommand.Parameters.AddWithValue("@Address", encrypt(patient.Address.Trim()));
@@ -283,7 +297,7 @@ LIMIT 1;";
 
         public void UpdatePatient(Patient patient)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteTransaction transaction = connection.BeginTransaction();
@@ -301,6 +315,8 @@ LIMIT 1;";
             MiddleName = @MiddleName,
             LastName = @LastName,
             PhoneNumber = @PhoneNumber,
+            EmailAddress = @EmailAddress,
+            EmailNotificationsEnabled = @EmailNotificationsEnabled,
             BirthDate = @BirthDate,
             Gender = @Gender,
             Address = @Address,
@@ -316,10 +332,12 @@ LIMIT 1;";
                 updatePatientCommand.Parameters.AddWithValue("@FirstName", patient.FirstName.Trim());
                 updatePatientCommand.Parameters.AddWithValue("@MiddleName", patient.MiddleName.Trim());
                 updatePatientCommand.Parameters.AddWithValue("@LastName", patient.LastName.Trim());
-                updatePatientCommand.Parameters.AddWithValue("@PhoneNumber", CryptoService.EncryptString(patient.PhoneNumber.Trim()));
+                updatePatientCommand.Parameters.AddWithValue("@PhoneNumber", encrypt(patient.PhoneNumber.Trim()));
+                updatePatientCommand.Parameters.AddWithValue("@EmailAddress", encrypt(patient.EmailAddress.Trim()));
+                updatePatientCommand.Parameters.AddWithValue("@EmailNotificationsEnabled", patient.EmailNotificationsEnabled ? 1 : 0);
                 updatePatientCommand.Parameters.AddWithValue("@BirthDate", patient.BirthDate.ToString("yyyy-MM-dd"));
                 updatePatientCommand.Parameters.AddWithValue("@Gender", patient.Gender.Trim());
-                updatePatientCommand.Parameters.AddWithValue("@Address", CryptoService.EncryptString(patient.Address.Trim()));
+                updatePatientCommand.Parameters.AddWithValue("@Address", encrypt(patient.Address.Trim()));
                 updatePatientCommand.Parameters.AddWithValue("@IsPWD", patient.IsPwd ? 1 : 0);
                 updatePatientCommand.Parameters.AddWithValue("@IsSeniorCitizen", patient.IsSeniorCitizen ? 1 : 0);
                 updatePatientCommand.Parameters.AddWithValue("@InitialTreatment", patient.InitialTreatment.Trim());
@@ -370,12 +388,12 @@ LIMIT 1;";
 
                 upsertHistoryCommand.Parameters.AddWithValue("@PatientId", patient.PatientId);
                 upsertHistoryCommand.Parameters.AddWithValue("@HasMedicalCondition", patient.HasMedicalCondition ? 1 : 0);
-                upsertHistoryCommand.Parameters.AddWithValue("@MedicalConditionNotes", CryptoService.EncryptString(patient.MedicalConditionNotes.Trim()));
-                upsertHistoryCommand.Parameters.AddWithValue("@AllergyNotes", CryptoService.EncryptString(patient.AllergyNotes.Trim()));
-                upsertHistoryCommand.Parameters.AddWithValue("@CurrentMedication", CryptoService.EncryptString(patient.CurrentMedication.Trim()));
+                upsertHistoryCommand.Parameters.AddWithValue("@MedicalConditionNotes", encrypt(patient.MedicalConditionNotes.Trim()));
+                upsertHistoryCommand.Parameters.AddWithValue("@AllergyNotes", encrypt(patient.AllergyNotes.Trim()));
+                upsertHistoryCommand.Parameters.AddWithValue("@CurrentMedication", encrypt(patient.CurrentMedication.Trim()));
                 upsertHistoryCommand.Parameters.AddWithValue("@RequiresMedicalClearance", patient.RequiresMedicalClearance ? 1 : 0);
-                upsertHistoryCommand.Parameters.AddWithValue("@ClearanceNotes", CryptoService.EncryptString(patient.ClearanceNotes.Trim()));
-                upsertHistoryCommand.Parameters.AddWithValue("@InitialTreatmentNotes", CryptoService.EncryptString(patient.InitialTreatmentNotes.Trim()));
+                upsertHistoryCommand.Parameters.AddWithValue("@ClearanceNotes", encrypt(patient.ClearanceNotes.Trim()));
+                upsertHistoryCommand.Parameters.AddWithValue("@InitialTreatmentNotes", encrypt(patient.InitialTreatmentNotes.Trim()));
                 upsertHistoryCommand.Parameters.AddWithValue("@CreatedAt", updatedAt);
                 upsertHistoryCommand.Parameters.AddWithValue("@UpdatedAt", updatedAt);
 
@@ -398,7 +416,7 @@ LIMIT 1;";
         {
             List<TreatmentRecordListItem> treatmentRecords = new();
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -481,7 +499,7 @@ ORDER BY AppointmentImageId DESC;";
 
         public void SetPatientActiveStatus(int patientId, bool isActive)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -510,7 +528,7 @@ WHERE PatientId = @PatientId;";
             DateTime birthDate,
             int? excludedPatientId = null)
         {
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -564,7 +582,7 @@ WHERE PatientId = @PatientId;";
         {
             List<ServiceItem> services = new();
 
-            using SqliteConnection connection = DatabaseService.GetConnection();
+            using SqliteConnection connection = getConnection();
             connection.Open();
 
             using SqliteCommand command = connection.CreateCommand();
@@ -632,7 +650,7 @@ LIMIT 1;";
                 FirstName = reader["FirstName"]?.ToString() ?? string.Empty,
                 MiddleName = reader["MiddleName"]?.ToString() ?? string.Empty,
                 LastName = reader["LastName"]?.ToString() ?? string.Empty,
-                PhoneNumber = CryptoService.DecryptString(reader["PhoneNumber"]?.ToString()),
+                PhoneNumber = decrypt(reader["PhoneNumber"]?.ToString()),
                 DateOfBirth = ParseNullableDate(reader["BirthDate"]?.ToString()),
                 Gender = reader["Gender"]?.ToString() ?? string.Empty,
                 Treatment = reader["InitialTreatment"]?.ToString() ?? string.Empty,
@@ -656,10 +674,12 @@ LIMIT 1;";
                 FirstName = reader["FirstName"]?.ToString() ?? string.Empty,
                 MiddleName = reader["MiddleName"]?.ToString() ?? string.Empty,
                 LastName = reader["LastName"]?.ToString() ?? string.Empty,
-                PhoneNumber = CryptoService.DecryptString(reader["PhoneNumber"]?.ToString()),
+                PhoneNumber = decrypt(reader["PhoneNumber"]?.ToString()),
+                EmailAddress = decrypt(reader["EmailAddress"]?.ToString()),
+                EmailNotificationsEnabled = Convert.ToInt32(reader["EmailNotificationsEnabled"]) == 1,
                 BirthDate = ParseDate(reader["BirthDate"]?.ToString()),
                 Gender = reader["Gender"]?.ToString() ?? string.Empty,
-                Address = CryptoService.DecryptString(reader["Address"]?.ToString()),
+                Address = decrypt(reader["Address"]?.ToString()),
                 IsPwd = Convert.ToInt32(reader["IsPWD"]) == 1,
                 IsSeniorCitizen = Convert.ToInt32(reader["IsSeniorCitizen"]) == 1,
                 InitialTreatment = reader["InitialTreatment"]?.ToString() ?? string.Empty,
@@ -670,12 +690,12 @@ LIMIT 1;";
                 CreatedAt = ParseDate(reader["CreatedAt"]?.ToString()),
                 UpdatedAt = ParseNullableDate(reader["UpdatedAt"]?.ToString()),
                 HasMedicalCondition = SafeGetInt(reader, "HasMedicalCondition") == 1,
-                MedicalConditionNotes = CryptoService.DecryptString(SafeGetString(reader, "MedicalConditionNotes")),
-                AllergyNotes = CryptoService.DecryptString(SafeGetString(reader, "AllergyNotes")),
-                CurrentMedication = CryptoService.DecryptString(SafeGetString(reader, "CurrentMedication")),
+                MedicalConditionNotes = decrypt(SafeGetString(reader, "MedicalConditionNotes")),
+                AllergyNotes = decrypt(SafeGetString(reader, "AllergyNotes")),
+                CurrentMedication = decrypt(SafeGetString(reader, "CurrentMedication")),
                 RequiresMedicalClearance = SafeGetInt(reader, "RequiresMedicalClearance") == 1,
-                ClearanceNotes = CryptoService.DecryptString(SafeGetString(reader, "ClearanceNotes")),
-                InitialTreatmentNotes = CryptoService.DecryptString(SafeGetString(reader, "InitialTreatmentNotes"))
+                ClearanceNotes = decrypt(SafeGetString(reader, "ClearanceNotes")),
+                InitialTreatmentNotes = decrypt(SafeGetString(reader, "InitialTreatmentNotes"))
             };
         }
         private string SafeGetString(SqliteDataReader reader, string columnName)
@@ -743,7 +763,7 @@ LIMIT 1;";
 
             try
             {
-                return CryptoService.DecryptString(encryptedValue);
+                return decrypt(encryptedValue);
             }
             catch
             {

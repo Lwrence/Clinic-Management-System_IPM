@@ -39,6 +39,7 @@ namespace CruzNeryClinic.Data
             EnsureBillingInvoiceSchema(connection);
             EnsureAppointmentSchema(connection);
             CruzNeryClinic.Repositories.PatientMigrationRepository.EnsureSchema(connection);
+            CruzNeryClinic.Repositories.EmailNotificationRepository.EnsureSchema(connection);
         }
 
         private static void EnsurePatientConsentSchema(SqliteConnection connection)

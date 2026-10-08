@@ -392,6 +392,9 @@
                                             Visibility="{Binding HasUnresolvedBirthDate, Converter={StaticResource VisibleWhenTrue}}"/>
                                     </StackPanel>
                                 </Grid>
+                                <TextBlock Text="Email address (optional)" Style="{StaticResource Label}"/>
+                                <TextBox Text="{Binding EmailAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}"/>
+                                <CheckBox IsChecked="{Binding EmailNotificationsEnabled}" Margin="0,8,0,8"><TextBlock Text="Patient agrees to appointment updates and PDF receipts by email" TextWrapping="Wrap"/></CheckBox>
                                 <TextBlock Text="Address" Style="{StaticResource Label}"/>
                                 <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" MinHeight="56" AcceptsReturn="True" TextWrapping="Wrap"/>
                                 <CheckBox IsChecked="{Binding IsPwd}"><TextBlock Text="Person with disability (verified)" TextWrapping="Wrap"/></CheckBox>

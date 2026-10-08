@@ -50,6 +50,8 @@ public static class PatientMigrationValidationService
         if (string.IsNullOrWhiteSpace(draft.LastName)) errors.Add("Last name is required.");
         string phone = NormalizePhone(draft.PhoneNumber);
         if (!Regex.IsMatch(draft.PhoneNumber.Trim(), @"^[+\d\s()\-]+$") || !Regex.IsMatch(phone, @"^09\d{9}$")) errors.Add("Contact number must be an 11-digit mobile number starting with 09.");
+        if (!string.IsNullOrWhiteSpace(draft.EmailAddress) && !EmailAddressValidation.IsValid(draft.EmailAddress))
+            errors.Add("Email address is invalid. Correct it or leave the optional field blank.");
         bool validDate = TryBirthDate(draft.BirthDateText, out DateTime birthDate);
         if (!validDate) errors.Add("Date of birth is missing, invalid, or ambiguous. Enter yyyy-MM-dd.");
         else if (birthDate.Date > today.Date.AddYears(-1) || birthDate.Date < today.Date.AddYears(-120))
@@ -90,6 +92,7 @@ public static class PatientMigrationValidationService
         {
             FirstName = draft.FirstName.Trim(), MiddleName = draft.MiddleName.Trim(), LastName = draft.LastName.Trim(),
             PhoneNumber = phone, BirthDate = birthDate.Date,
+            EmailAddress = draft.EmailAddress.Trim(), EmailNotificationsEnabled = draft.EmailNotificationsEnabled,
             Gender = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(gender.ToLowerInvariant()),
             Address = draft.Address.Trim(), IsPwd = draft.IsPwd,
             IsSeniorCitizen = birthDate.Date <= today.Date.AddYears(-60),

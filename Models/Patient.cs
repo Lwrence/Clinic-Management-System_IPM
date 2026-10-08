@@ -15,6 +15,8 @@ namespace CruzNeryClinic.Models
         public string LastName { get; set; } = string.Empty;
 
         public string PhoneNumber { get; set; } = string.Empty;
+        public string EmailAddress { get; set; } = string.Empty;
+        public bool EmailNotificationsEnabled { get; set; }
 
         public DateTime BirthDate { get; set; } = DateTime.Today;
 

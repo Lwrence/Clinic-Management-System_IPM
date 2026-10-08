@@ -250,8 +250,15 @@
                     </StackPanel>
                 </Grid>
 
+                <StackPanel Margin="0,14,0,0">
+                    <TextBlock Style="{StaticResource PatientOverlayFieldLabelStyle}" Text="Email address (optional)"/>
+                    <TextBox Style="{StaticResource PatientOverlayTextBoxStyle}" Tag="patient@example.com"
+                             Text="{Binding FormEmailAddress, UpdateSourceTrigger=PropertyChanged}"/>
+                    <CheckBox Margin="0,10,0,0" IsChecked="{Binding FormEmailNotificationsEnabled}">
+                        <TextBlock Text="Patient agrees to receive appointment updates and PDF receipts by email" TextWrapping="Wrap"/>
+                    </CheckBox>
+                </StackPanel>
                 <Border Style="{StaticResource PatientOverlaySectionDividerStyle}" />
-
                 <TextBlock
                     Margin="0,0,0,12"
                     FontSize="16"

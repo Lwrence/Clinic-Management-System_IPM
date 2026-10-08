@@ -114,6 +114,7 @@ namespace CruzNeryClinic.ViewModels
                 "ManageUsers" => CreateUserManagementView(),
                 "Patients" => CreatePatientManagementView(),
                 "DataMigration" => new DataMigrationView { DataContext = new DataMigrationViewModel() },
+                "EmailNotifications" => new EmailNotificationsView { DataContext = new EmailNotificationsViewModel() },
                 "Appointment" => CreateAppointmentManagementView(),
                 "Billing" => CreateBillingView(),
                 "Inventory" => CreateInventoryView(),
