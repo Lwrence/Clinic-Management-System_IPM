@@ -219,11 +219,14 @@ LIMIT 10;";
 
         public List<AppointmentServiceOption> GetActiveServices()
         {
-            List<AppointmentServiceOption> services = new();
-
             using SqliteConnection connection = DatabaseService.GetConnection();
             connection.Open();
+            return GetActiveServices(connection);
+        }
 
+        internal static List<AppointmentServiceOption> GetActiveServices(SqliteConnection connection)
+        {
+            List<AppointmentServiceOption> services = new();
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText = @"
 SELECT

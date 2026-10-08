@@ -1,0 +1,622 @@
+<UserControl x:Class="CruzNeryClinic.Views.DataMigrationView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="VisibleWhenTrue"/>
+        <DropShadowEffect x:Key="CardDropShadow" Color="#000000" BlurRadius="14"
+            ShadowDepth="2" Direction="270" Opacity="0.16"/>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="28,18"/>
+            <Setter Property="BorderBrush" Value="#D8D8D8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Effect" Value="{StaticResource CardDropShadow}"/>
+        </Style>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,12,0,6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#111111"/>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#111111"/>
+        </Style>
+        <Style x:Key="PrimaryAction" TargetType="Button">
+            <Setter Property="Background" Value="#223357"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="18,0"/>
+            <Setter Property="MinHeight" Value="42"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ActionBorder" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ActionBorder" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ActionBorder" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ActionBorder" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="QuietAction" TargetType="Button" BasedOn="{StaticResource PrimaryAction}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#223357"/>
+            <Setter Property="BorderBrush" Value="#223357"/>
+        </Style>
+        <Style x:Key="StageIndicator" TargetType="Border">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#D8D8D8"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="12,8"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,12,0,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="MigrationGridCell" TargetType="DataGridCell" BasedOn="{StaticResource DashboardDataGridCellStyle}">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#EEF2F8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="MigrationGridHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource DashboardDataGridColumnHeaderStyle}">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,10"/>
+        </Style>
+        <Style x:Key="ResultsGrid" TargetType="DataGrid" BasedOn="{StaticResource DashboardDataGridStyle}">
+            <Setter Property="CellStyle" Value="{StaticResource MigrationGridCell}"/>
+            <Setter Property="ColumnHeaderStyle" Value="{StaticResource MigrationGridHeader}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="GridLinesVisibility" Value="None"/>
+            <Setter Property="RowHeight" Value="48"/>
+            <Setter Property="AlternatingRowBackground" Value="White"/>
+        </Style>
+        <Style x:Key="OutcomeText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#00A423"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Result}" Value="Rejected"><Setter Property="Foreground" Value="#A16207"/></DataTrigger>
+                <DataTrigger Binding="{Binding Result}" Value="Failed"><Setter Property="Foreground" Value="#B91C1C"/></DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- A visible scrollbar for the patient list, scoped to this view. -->
+        <Style x:Key="MigrationRecordsScrollBar" TargetType="{x:Type ScrollBar}">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Track x:Name="PART_Track" Orientation="{TemplateBinding Orientation}" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb MinHeight="28">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="{x:Type Thumb}">
+                                                <Border Background="#223357" CornerRadius="4" Margin="2"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="False"/>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </UserControl.Resources>
+
+    <Grid Background="#FAF9F6">
+        <Grid x:Name="MigrationWorkspace" Margin="28,20,28,20" IsEnabled="{Binding CanInteract}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Data Migration" FontSize="30" FontWeight="Bold" Foreground="#111111"/>
+                    <TextBlock Text="Import and verify existing Word patient records." FontSize="14"
+                        Foreground="#777777" Margin="0,8,16,0" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="Migration History" Command="{Binding ViewHistoryCommand}"
+                    Style="{StaticResource QuietAction}" VerticalAlignment="Top"/>
+            </Grid>
+            <UniformGrid Grid.Row="1" Columns="3" Margin="0,24,0,0"
+                Visibility="{Binding IsWorkflowStage, Converter={StaticResource VisibleWhenTrue}}">
+                <Border>
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StageIndicator}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsUploadStage}" Value="True">
+                                    <Setter Property="Background" Value="#EEF2F8"/>
+                                    <Setter Property="BorderBrush" Value="#223357"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="1  Upload" FontSize="13" FontWeight="SemiBold" Foreground="#223357"/>
+                </Border>
+                <Border>
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StageIndicator}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsReviewStage}" Value="True">
+                                    <Setter Property="Background" Value="#EEF2F8"/>
+                                    <Setter Property="BorderBrush" Value="#223357"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="2  Review" FontSize="13" FontWeight="SemiBold" Foreground="#223357"/>
+                </Border>
+                <Border>
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource StageIndicator}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsConfirmStage}" Value="True">
+                                    <Setter Property="Background" Value="#EEF2F8"/>
+                                    <Setter Property="BorderBrush" Value="#223357"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="3  Confirm &amp; Save" FontSize="13" FontWeight="SemiBold" Foreground="#223357"/>
+                </Border>
+            </UniformGrid>
+            <StackPanel Grid.Row="2" Margin="0,14,0,16">
+                <TextBlock Text="{Binding StatusMessage}" Foreground="#777777" FontSize="13" TextWrapping="Wrap"/>
+                <ProgressBar IsIndeterminate="True" Height="3" Margin="0,8,0,0"
+                    Visibility="{Binding IsBusy, Converter={StaticResource VisibleWhenTrue}}"/>
+                <Border Background="#FEF2F2" CornerRadius="6" Padding="12" Margin="0,10,0,0"
+                    Visibility="{Binding HasFileIssues, Converter={StaticResource VisibleWhenTrue}}">
+                    <TextBlock Text="{Binding FileIssues}" TextWrapping="Wrap" Foreground="#B91C1C" FontSize="13"/>
+                </Border>
+            </StackPanel>
+
+            <!-- Upload: select a Word file, then explicitly extract its patient records. -->
+            <Border Grid.Row="3" Style="{StaticResource Card}" MaxWidth="680" VerticalAlignment="Top" Margin="0,28,0,0"
+                Visibility="{Binding IsUploadStage, Converter={StaticResource VisibleWhenTrue}}" IsEnabled="{Binding CanInteract}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="4,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <fa:IconBlock Icon="FileWord" FontSize="30" Foreground="#223357" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Upload patient records" FontSize="20" FontWeight="SemiBold" Foreground="#111111"/>
+                                <TextBlock Text="Choose the Word record you want to migrate." FontSize="13" Foreground="#777777" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                        <Button Content="Select Word File" Command="{Binding SelectDocumentsCommand}"
+                            Style="{StaticResource QuietAction}" HorizontalAlignment="Left" Margin="0,24,0,0"/>
+                        <Border Background="#F6F6F6" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="14" Margin="0,12,0,0">
+                            <ScrollViewer MaxHeight="110" VerticalScrollBarVisibility="Auto">
+                                <TextBlock Text="{Binding SelectedFileNames}" Foreground="#444444" FontSize="13" TextWrapping="Wrap"/>
+                            </ScrollViewer>
+                        </Border>
+                        <TextBlock Text="Supports .docx patient tables and labeled forms. Save older .doc files as .docx first."
+                            Foreground="#777777" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                        <Button Content="Extract Records" Command="{Binding ExtractDocumentsCommand}"
+                            Style="{StaticResource PrimaryAction}" HorizontalAlignment="Right" Margin="0,24,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+
+            <!-- Steps 3 to 6: review source, inspect validation, and correct patient fields. -->
+            <Grid Grid.Row="3" Visibility="{Binding IsReviewStage, Converter={StaticResource VisibleWhenTrue}}"
+                IsEnabled="{Binding CanInteract}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="0.7*" MinWidth="220"/><ColumnDefinition Width="28"/><ColumnDefinition Width="1.7*"/></Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}" Padding="16">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <TextBlock Text="Extracted records" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Grid.Row="1" Text="{Binding Summary}" TextWrapping="Wrap" FontSize="12" Foreground="#777777" Margin="0,6,0,14"/>
+                        <ListBox x:Name="ExtractedRecordsList" Grid.Row="2" ItemsSource="{Binding Drafts}"
+                            SelectedItem="{Binding SelectedDraft}" HorizontalContentAlignment="Stretch"
+                            BorderThickness="0" Background="Transparent" Padding="0"
+                            ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                            ScrollViewer.CanContentScroll="True" VirtualizingPanel.ScrollUnit="Pixel">
+                            <ListBox.Resources>
+                                <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource MigrationRecordsScrollBar}"/>
+                            </ListBox.Resources>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="{x:Type ListBoxItem}">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                                                <ContentPresenter/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,6,6">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                        <Setter Property="Background" Value="#EEF2F8"/>
+                                                        <Setter Property="BorderBrush" Value="#223357"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                            <TextBlock Text="{Binding PatientDisplay}" FontSize="13" FontWeight="SemiBold" Foreground="#223357"
+                                                TextTrimming="CharacterEllipsis" ToolTip="{Binding PatientDisplay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                            <CheckBox Grid.Column="1" IsChecked="{Binding IncludeInImport}" IsEnabled="{Binding CanEdit}" Margin="0"
+                                                ToolTip="Include this patient for saving" AutomationProperties.Name="Include patient record for saving"/>
+                                            <TextBlock Grid.Row="1" Text="{Binding ReviewStatus}" FontSize="11" Foreground="#64748B" Margin="0,5,8,0"
+                                                TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SourceRecordNumber, StringFormat='Record {0}'}"
+                                                FontSize="11" Foreground="#64748B" Margin="0,5,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock Grid.Row="3" Text="Scroll to view all records. Uncheck patients you do not want to save." FontSize="12" Foreground="#777777" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                    </Grid>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel DataContext="{Binding SelectedDraft}">
+                            <TextBlock Text="Review and complete patient information" Style="{StaticResource SectionTitle}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding SourceDisplay}" FontSize="12" Foreground="#777777" Margin="0,6,0,14" TextWrapping="Wrap"/>
+                            <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,12"
+                                Visibility="{Binding HasMissingInformationErrors, Converter={StaticResource VisibleWhenTrue}}">
+                                <StackPanel>
+                                    <TextBlock Text="Complete these details" FontSize="13" FontWeight="SemiBold" Foreground="#991B1B"/>
+                                    <ScrollViewer MaxHeight="76" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
+                                        <ItemsControl ItemsSource="{Binding MissingInformationErrors}">
+                                            <ItemsControl.ItemTemplate><DataTemplate>
+                                                <TextBlock Text="{Binding}" FontSize="12" Foreground="#B91C1C" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                            </DataTemplate></ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="1" Padding="12" CornerRadius="6" Margin="0,0,0,12"
+                                Visibility="{Binding HasDuplicateIssues, Converter={StaticResource VisibleWhenTrue}}">
+                                <TextBlock Text="Possible duplicate records found. Review the validation checks before approving."
+                                    FontSize="12" Foreground="#92400E" TextWrapping="Wrap"/>
+                            </Border>
+
+                            <Expander Header="Original Word information" IsExpanded="False" Margin="0,0,0,14">
+                                <TextBox Text="{Binding SourceText, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                                    MinHeight="90" MaxHeight="160" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0" Background="#F8FAFC"/>
+                            </Expander>
+                            <Expander x:Name="ValidationDetails" Header="{Binding ValidationSummary}" IsExpanded="{Binding DataContext.IsValidationExpanded, RelativeSource={RelativeSource AncestorType=UserControl}}" Margin="0,0,0,14"><StackPanel Margin="0,10,0,0">
+                            <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" Padding="14" CornerRadius="8" Margin="0,0,0,12"
+                                Visibility="{Binding HasMissingInformationErrors, Converter={StaticResource VisibleWhenTrue}}">
+                                <StackPanel>
+                                    <TextBlock Text="Missing or incomplete information" FontWeight="Bold" Foreground="#991B1B"/>
+                                    <ItemsControl ItemsSource="{Binding MissingInformationErrors}" Margin="0,6,0,0">
+                                        <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="#B91C1C" Margin="0,4,0,0" FontSize="12"/></DataTemplate></ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="1" Padding="14" CornerRadius="8" Margin="0,0,0,12"
+                                Visibility="{Binding HasDuplicateIssues, Converter={StaticResource VisibleWhenTrue}}">
+                                <StackPanel>
+                                    <TextBlock Text="Duplicate record check" FontWeight="Bold" Foreground="#92400E"/>
+                                    <TextBlock Text="Compare these active or archived patient records before approving this draft." TextWrapping="Wrap" FontSize="12" Foreground="#92400E" Margin="0,6,0,6"/>
+                                    <ItemsControl ItemsSource="{Binding DuplicateErrors}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="#B91C1C" FontWeight="SemiBold" Margin="0,4,0,8"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                                    <ItemsControl ItemsSource="{Binding PossibleMatches}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,4,0,0">
+                                                    <TextBlock TextWrapping="Wrap"><Run Text="{Binding PatientCode}" FontWeight="Bold"/><Run Text=" · "/><Run Text="{Binding FirstName}"/><Run Text=" "/><Run Text="{Binding LastName}"/></TextBlock>
+                                                    <TextBlock Text="{Binding BirthDate, StringFormat='Date of birth: {0:yyyy-MM-dd}'}" Foreground="#777777" FontSize="12"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#F8FAFC" Padding="14" CornerRadius="8" Margin="0,0,0,12"
+                                Visibility="{Binding HasValidationWarnings, Converter={StaticResource VisibleWhenTrue}}">
+                                <StackPanel>
+                                    <TextBlock Text="Information to verify" FontWeight="Bold" Foreground="#92400E"/>
+                                    <ItemsControl ItemsSource="{Binding ValidationWarnings}" Margin="0,6,0,0">
+                                        <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="#92400E" Margin="0,4,0,0" FontSize="12"/></DataTemplate></ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                            </StackPanel></Expander>
+                            <StackPanel IsEnabled="{Binding CanEdit}">
+                                <TextBlock Text="Patient details" Style="{StaticResource SectionTitle}" Margin="0,6,0,4"/>
+                                <TextBlock Text="Required fields are marked *. Use the calendar to select the date of birth." Foreground="#777777" FontSize="12" TextWrapping="Wrap"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0" Grid.Column="0"><TextBlock Text="First name *" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="0" Grid.Column="2"><TextBlock Text="Last name *" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="0"><TextBlock Text="Middle name" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding MiddleName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="2"><TextBlock Text="Gender *" Style="{StaticResource Label}"/>
+                                        <ComboBox ItemsSource="{Binding DataContext.GenderOptions, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Gender}" Height="42" Style="{StaticResource ExactStyleComboBox}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="0"><TextBlock Text="Contact number *" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding PhoneNumber, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="2"><TextBlock Text="Date of birth *" Style="{StaticResource Label}"/>
+                                        <DatePicker x:Name="MigrationBirthDatePicker" SelectedDate="{Binding BirthDate, Mode=TwoWay}"
+                                            Style="{StaticResource AppointmentDatePickerStyle}" Height="42"/>
+                                        <TextBlock Text="{Binding UnresolvedBirthDateMessage}" TextWrapping="Wrap"
+                                            Foreground="#92400E" FontSize="12" Margin="0,6,0,0"
+                                            Visibility="{Binding HasUnresolvedBirthDate, Converter={StaticResource VisibleWhenTrue}}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="Address" Style="{StaticResource Label}"/>
+                                <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" MinHeight="56" AcceptsReturn="True" TextWrapping="Wrap"/>
+                                <CheckBox IsChecked="{Binding IsPwd}"><TextBlock Text="Person with disability (verified)" TextWrapping="Wrap"/></CheckBox>
+                                <TextBlock Text="Senior status is calculated from the verified date of birth." Foreground="#777777" FontSize="12" Margin="0,6,0,12" TextWrapping="Wrap"/>
+                                <Expander Header="Medical background and initial visit" Margin="0,8,0,14">
+                                    <StackPanel>
+                                        <CheckBox IsChecked="{Binding HasMedicalCondition}"><TextBlock Text="Has a medical condition" TextWrapping="Wrap"/></CheckBox>
+                                        <TextBlock Text="Medical condition notes" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding MedicalConditionNotes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54"/>
+                                        <TextBlock Text="Allergies" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding AllergyNotes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54"/>
+                                        <TextBlock Text="Current medication" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding CurrentMedication, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54"/>
+                                        <CheckBox IsChecked="{Binding RequiresMedicalClearance}"><TextBlock Text="Requires medical clearance" TextWrapping="Wrap"/></CheckBox>
+                                        <TextBlock Text="Medical clearance notes" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding ClearanceNotes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54"/>
+                                        <TextBlock Text="Initial treatment / service" Style="{StaticResource Label}"/>
+                                        <ComboBox x:Name="MigrationServicePicker" Height="42" IsEditable="False"
+                                            ItemsSource="{Binding DataContext.ServiceOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            SelectedItem="{Binding DataContext.SelectedInitialService, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
+                                            Style="{StaticResource ExactStyleComboBox}" Tag="Choose service / treatment">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding DisplayText}"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <TextBlock Text="{Binding DataContext.UnlistedInitialTreatmentMessage, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            Foreground="#92400E" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"
+                                            Visibility="{Binding DataContext.HasUnlistedInitialTreatment, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource VisibleWhenTrue}}"/>
+                                        <TextBlock Text="Initial visit / treatment notes" Style="{StaticResource Label}"/>
+                                        <TextBox Text="{Binding InitialTreatmentNotes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="54"/>
+                                    </StackPanel>
+                                </Expander>
+                                <Border Background="#EFF6FF" Padding="16" CornerRadius="8">
+                                    <StackPanel>
+                                        <TextBlock Text="Staff review" FontWeight="Bold" Foreground="#223357"/>
+                                        <CheckBox IsChecked="{Binding HasConsent}"><TextBlock Text="Patient data privacy consent or authorization has been recorded." TextWrapping="Wrap"/></CheckBox>
+                                        <CheckBox IsChecked="{Binding AcknowledgeWarnings}"
+                                            Visibility="{Binding HasValidationWarnings, Converter={StaticResource VisibleWhenTrue}}">
+                                            <TextBlock Text="I have checked the source, warnings, and possible duplicate records." TextWrapping="Wrap"/>
+                                        </CheckBox>
+                                        <CheckBox IsChecked="{Binding IsReviewed}" IsEnabled="{Binding CanApprove}">
+                                            <TextBlock Text="I approve this corrected patient information for saving." TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                        </CheckBox>
+                                        <TextBlock Text="Changing a field clears this approval." Foreground="#777777" FontSize="12" Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+
+            <!-- Steps 7 and 8: explicit confirmation, then save only approved records. -->
+            <Border Grid.Row="3" Style="{StaticResource Card}"
+                Visibility="{Binding IsConfirmStage, Converter={StaticResource VisibleWhenTrue}}" IsEnabled="{Binding CanInteract}">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <StackPanel Margin="0,0,0,18">
+                        <TextBlock Text="Confirm approved records" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="{Binding ConfirmationSummary}" FontSize="14" Margin="0,8,0,0"/>
+                        <TextBlock Text="{Binding ReviewerDisplay, StringFormat='Reviewed by: {0}'}" FontSize="12" Foreground="#777777" Margin="0,6,0,0"/>
+                        <TextBlock Text="Return to review if any detail needs correcting. Only the approved records below will be saved."
+                            Foreground="#777777" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    </StackPanel>
+                    <DataGrid Grid.Row="1" Style="{StaticResource ResultsGrid}" ItemsSource="{Binding ConfirmationRecords}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Patient" Binding="{Binding PatientDisplay}" Width="1.4*"/>
+                            <DataGridTextColumn Header="Date of birth" Binding="{Binding BirthDateText}" Width="110"/>
+                            <DataGridTextColumn Header="Contact number" Binding="{Binding ValidatedPatient.PhoneNumber}" Width="125"/>
+                            <DataGridTextColumn Header="Source record" Binding="{Binding SourceDisplay}" Width="1.4*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <Border Grid.Row="2" Background="#EFF6FF" CornerRadius="8" Padding="18" Margin="0,18,0,0">
+                        <StackPanel>
+                            <CheckBox IsChecked="{Binding HasConfirmedSave}" Margin="0">
+                                <TextBlock Text="I confirm that the selected patient information has been reviewed, corrected, and approved for permanent storage." TextWrapping="Wrap" FontWeight="SemiBold"/>
+                            </CheckBox>
+                            <TextBlock Text="Saving also records the migration result for tracking."
+                                TextWrapping="Wrap" FontSize="12" Foreground="#777777" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Completion is a short outcome screen after the three-step workflow. -->
+            <Border Grid.Row="3" Style="{StaticResource Card}" MaxWidth="620" VerticalAlignment="Top" Margin="0,48,0,0"
+                Visibility="{Binding IsCompletionStage, Converter={StaticResource VisibleWhenTrue}}" IsEnabled="{Binding CanInteract}">
+                <StackPanel Margin="8,18">
+                    <fa:IconBlock Icon="CheckCircle" FontSize="46" Foreground="#00A423" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Migration Complete" FontSize="24" FontWeight="SemiBold" Foreground="#111111"
+                        HorizontalAlignment="Center" Margin="0,18,0,0"/>
+                    <TextBlock Text="{Binding ResultMessage}" Foreground="#777777" TextWrapping="Wrap" TextAlignment="Center" Margin="0,12,0,0"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,28,0,0">
+                        <Button Content="View Results" Command="{Binding ViewResultsCommand}" Style="{StaticResource QuietAction}" Margin="0,0,12,0"/>
+                        <Button Content="Start New Migration" Command="{Binding StartNewCommand}" Style="{StaticResource PrimaryAction}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+
+            <!-- Step 9: durable migration tracking, including rejected and failed attempts. -->
+            <Border Grid.Row="3" Style="{StaticResource Card}"
+                Visibility="{Binding IsHistoryStage, Converter={StaticResource VisibleWhenTrue}}" IsEnabled="{Binding CanInteract}">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <StackPanel Margin="0,0,0,18">
+                        <TextBlock Text="{Binding HistoryTitle}" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="{Binding HistoryDescription}" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#777777"/>
+                    </StackPanel>
+                    <DataGrid Grid.Row="1" Style="{StaticResource ResultsGrid}" ItemsSource="{Binding DisplayedHistoryItems}"
+                        SelectedItem="{Binding SelectedHistoryItem}">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Result" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="4" Padding="7,4" Margin="4" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#ECFDF5"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Result}" Value="Failed"><Setter Property="Background" Value="#FEE2E2"/></DataTrigger>
+                                                        <DataTrigger Binding="{Binding Result}" Value="Rejected"><Setter Property="Background" Value="#FEF3C7"/></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding Result}" FontWeight="SemiBold" FontSize="12" Foreground="#444444"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Patient ID" Binding="{Binding PatientCode}" Width="85"/>
+                            <DataGridTextColumn Header="Source record" Binding="{Binding SourceDisplay}" Width="1.7*" MinWidth="130"/>
+                            <DataGridTextColumn Header="Patient" Binding="{Binding PatientName}" Width="1.2*" MinWidth="110"/>
+                            <DataGridTextColumn Header="Staff" Binding="{Binding ProcessedBy}" Width="100"/>
+                            <DataGridTextColumn Header="Processed" Binding="{Binding ProcessedAtDisplay}" Width="165"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <Border Grid.Row="2" Background="#F8FAFC" CornerRadius="8" Padding="14" Margin="0,14,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Result details" FontWeight="SemiBold" Foreground="#223357"/>
+                            <TextBlock Text="{Binding SelectedHistoryItem.Details}" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#475569"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="4" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Button Content="{Binding BackButtonText}" Command="{Binding BackCommand}" Style="{StaticResource QuietAction}"
+                    Visibility="{Binding ShowBack, Converter={StaticResource VisibleWhenTrue}}"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button x:Name="CheckInformationButton" Content="Check Information" Command="{Binding ValidateCommand}" Style="{StaticResource QuietAction}" Margin="0,0,10,0"
+                        Visibility="{Binding IsReviewStage, Converter={StaticResource VisibleWhenTrue}}"/>
+                    <Button Content="{Binding ContinueButtonText}" Command="{Binding ContinueCommand}" Style="{StaticResource PrimaryAction}"
+                        Visibility="{Binding IsReviewStage, Converter={StaticResource VisibleWhenTrue}}"/>
+                    <Button Content="Save Approved Records" Command="{Binding ImportCommand}" Style="{StaticResource PrimaryAction}"
+                        Visibility="{Binding IsConfirmStage, Converter={StaticResource VisibleWhenTrue}}"/>
+                    <Button Content="Start New Migration" Command="{Binding StartNewCommand}" Style="{StaticResource PrimaryAction}"
+                        Visibility="{Binding IsHistoryStage, Converter={StaticResource VisibleWhenTrue}}"/>
+                    <Button Content="Resume Review" Command="{Binding ContinueCommand}" Style="{StaticResource QuietAction}"
+                        Visibility="{Binding ShowResumeReview, Converter={StaticResource VisibleWhenTrue}}"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+        <Grid x:Name="InformationCheckDialog" Panel.ZIndex="10" Background="#66000000"
+            Visibility="{Binding IsCheckResultOpen, Converter={StaticResource VisibleWhenTrue}}"
+            KeyboardNavigation.TabNavigation="Cycle">
+            <Border Background="White" CornerRadius="10" Padding="24" MaxWidth="680" Margin="24"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Effect="{StaticResource CardDropShadow}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding CheckResultTitle}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#92400E"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CheckPassed}" Value="True">
+                                        <Setter Property="Foreground" Value="#15803D"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Grid.Row="1" Text="{Binding CheckResultMessage}" TextWrapping="Wrap" FontSize="13"
+                        Foreground="#475569" Margin="0,12,0,16"/>
+                    <ScrollViewer Grid.Row="2" MaxHeight="260" VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled"
+                        Visibility="{Binding HasCheckResults, Converter={StaticResource VisibleWhenTrue}}">
+                        <ScrollViewer.Resources>
+                            <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource MigrationRecordsScrollBar}"/>
+                        </ScrollViewer.Resources>
+                        <ItemsControl ItemsSource="{Binding CheckResults}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1"
+                                        CornerRadius="6" Padding="12" Margin="0,0,8,10">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding PatientName}" FontSize="14" FontWeight="SemiBold"
+                                                Foreground="#223357" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding SourceDisplay}" FontSize="11" Foreground="#64748B"
+                                                TextWrapping="Wrap" Margin="0,3,0,6"/>
+                                            <ItemsControl ItemsSource="{Binding Issues}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12"
+                                                            Foreground="#92400E" Margin="0,4,0,0"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <Button x:Name="DismissCheckResultButton" Grid.Row="3" Content="OK"
+                        Command="{Binding DismissCheckResultCommand}" Style="{StaticResource PrimaryAction}"
+                        HorizontalAlignment="Right" MinWidth="90" Margin="0,16,0,0" IsDefault="True"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

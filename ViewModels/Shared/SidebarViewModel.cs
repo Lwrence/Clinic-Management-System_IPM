@@ -21,6 +21,7 @@ namespace CruzNeryClinic.ViewModels.Shared
         {
             DashboardCommand = new RelayCommand(() => Navigate("Dashboard"));
             ManageUsersCommand = new RelayCommand(() => Navigate("ManageUsers"));
+            DataMigrationCommand = new RelayCommand(() => Navigate("DataMigration"));
             PatientsCommand = new RelayCommand(() => Navigate("Patients"));
             AppointmentCommand = new RelayCommand(() => Navigate("Appointment"));
             BillingCommand = new RelayCommand(() => Navigate("Billing"));
@@ -39,6 +40,7 @@ namespace CruzNeryClinic.ViewModels.Shared
 
         // Admin-only modules are hidden for non-admin users.
         public bool CanAccessAdminOnlyModules => SessionService.IsAdmin;
+        public bool CanAccessDataMigration => SessionService.CanAccessModule("DataMigration");
 
         public string SelectedModule
         {
@@ -50,6 +52,7 @@ namespace CruzNeryClinic.ViewModels.Shared
                 // Refresh all menu button colors after selected module changes.
                 OnPropertyChanged(nameof(DashboardBackground));
                 OnPropertyChanged(nameof(ManageUsersBackground));
+                OnPropertyChanged(nameof(DataMigrationBackground));
                 OnPropertyChanged(nameof(PatientsBackground));
                 OnPropertyChanged(nameof(AppointmentBackground));
                 OnPropertyChanged(nameof(BillingBackground));
@@ -61,6 +64,7 @@ namespace CruzNeryClinic.ViewModels.Shared
 
                 OnPropertyChanged(nameof(DashboardForeground));
                 OnPropertyChanged(nameof(ManageUsersForeground));
+                OnPropertyChanged(nameof(DataMigrationForeground));
                 OnPropertyChanged(nameof(PatientsForeground));
                 OnPropertyChanged(nameof(AppointmentForeground));
                 OnPropertyChanged(nameof(BillingForeground));
@@ -73,6 +77,7 @@ namespace CruzNeryClinic.ViewModels.Shared
 
         public Brush DashboardBackground => GetBackground("Dashboard");
         public Brush ManageUsersBackground => GetBackground("ManageUsers");
+        public Brush DataMigrationBackground => GetBackground("DataMigration");
         public Brush PatientsBackground => GetBackground("Patients");
         public Brush AppointmentBackground => GetBackground("Appointment");
         public Brush BillingBackground => GetBackground("Billing");
@@ -83,6 +88,7 @@ namespace CruzNeryClinic.ViewModels.Shared
 
         public Brush DashboardForeground => GetForeground("Dashboard");
         public Brush ManageUsersForeground => GetForeground("ManageUsers");
+        public Brush DataMigrationForeground => GetForeground("DataMigration");
         public Brush PatientsForeground => GetForeground("Patients");
         public Brush AppointmentForeground => GetForeground("Appointment");
         public Brush BillingForeground => GetForeground("Billing");
@@ -93,6 +99,7 @@ namespace CruzNeryClinic.ViewModels.Shared
 
         public ICommand DashboardCommand { get; }
         public ICommand ManageUsersCommand { get; }
+        public ICommand DataMigrationCommand { get; }
         public ICommand PatientsCommand { get; }
         public ICommand AppointmentCommand { get; }
         public ICommand BillingCommand { get; }

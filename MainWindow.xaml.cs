@@ -1,4 +1,4 @@
-﻿using CruzNeryClinic.ViewModels;
+using CruzNeryClinic.ViewModels;
 using CruzNeryClinic.Views;
 using CruzNeryClinic.Models;
 using System.Windows;
@@ -16,6 +16,14 @@ namespace CruzNeryClinic
 
             // Show the splash screen first when the application opens.
             ShowSplashScreen();
+        }
+
+        protected override void OnClosed(System.EventArgs e)
+        {
+            if (MainContent.Content is MainShellView shell && shell.DataContext is MainShellViewModel viewModel)
+                viewModel.ResetMigrationSession();
+            CruzNeryClinic.Services.SessionService.Logout();
+            base.OnClosed(e);
         }
 
         private async void ShowSplashScreen()

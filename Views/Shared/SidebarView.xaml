@@ -324,6 +324,20 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- Patient data migration: authorized clinic staff -->
+                    <Button Command="{Binding DataMigrationCommand}"
+                            Visibility="{Binding CanAccessDataMigration, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Style="{StaticResource SidebarMenuButtonStyle}"
+                            Background="{Binding DataMigrationBackground}"
+                            Foreground="{Binding DataMigrationForeground}">
+                        <StackPanel Orientation="Horizontal">
+                            <fa:IconBlock Icon="FileImport" Width="32" FontSize="18"
+                                          Foreground="{Binding DataMigrationForeground}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Data Migration" FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{Binding DataMigrationForeground}" VerticalAlignment="Center" Margin="18,0,0,0"/>
+                        </StackPanel>
+                    </Button>
+
                     <!-- Help: available to all roles -->
                     <Button Command="{Binding HelpCommand}"
                             Style="{StaticResource SidebarMenuButtonStyle}"

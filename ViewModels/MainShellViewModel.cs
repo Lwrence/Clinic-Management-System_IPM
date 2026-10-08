@@ -113,6 +113,7 @@ namespace CruzNeryClinic.ViewModels
                 "Dashboard" => CreateDashboardView(),
                 "ManageUsers" => CreateUserManagementView(),
                 "Patients" => CreatePatientManagementView(),
+                "DataMigration" => new DataMigrationView { DataContext = new DataMigrationViewModel() },
                 "Appointment" => CreateAppointmentManagementView(),
                 "Billing" => CreateBillingView(),
                 "Inventory" => CreateInventoryView(),
@@ -125,8 +126,16 @@ namespace CruzNeryClinic.ViewModels
 
         public void Logout()
         {
+            ResetMigrationSession();
             SessionService.Logout();
             LogoutRequested?.Invoke();
+        }
+
+        public void ResetMigrationSession()
+        {
+            loginSuccessToastTimer.Stop();
+            if (CurrentModuleView.DataContext is DataMigrationViewModel migration)
+                migration.ResetSession();
         }
 
         private bool NeedsEmployeePrivacyAcknowledgement()

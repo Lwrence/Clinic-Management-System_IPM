@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -8,6 +8,8 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>Dental Clinic Management System</AssemblyName>
     <ApplicationIcon>Assets\Icons\clinic.ico</ApplicationIcon>
+    <!-- Keep generated output out of source discovery for normal and isolated builds. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);buildcheck\**;**\bin\**;**\obj\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,5 +38,9 @@
     <Resource Include="Assets\Fonts\OpenSans\OpenSans-SemiBold.ttf"/>
     <Resource Include="Assets\Fonts\OpenSans\OpenSans-Bold.ttf"/>
     <Resource Include="Assets\Fonts\OpenSans\OpenSans-Medium.ttf"/>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Tests\**\*.cs" />
+    <Page Remove="Tests\**\*.xaml" />
   </ItemGroup>
 </Project>

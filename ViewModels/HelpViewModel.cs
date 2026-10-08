@@ -118,6 +118,13 @@ namespace CruzNeryClinic.ViewModels
         {
             ManualTopics.Add(new HelpManualTopic
             {
+                Title = "Data Migration and Validation",
+                Content = "Authorized clinic staff can open Data Migration and follow three steps: Upload, Review, and Confirm & Save. Use Select Word File, check the filename, then click Extract Records. Review the patient list and editable details, complete missing information, check duplicate matches, and approve each record to save. Continue to confirmation and explicitly confirm before Save Approved Records. Only selected, approved information is saved. After saving, use View Results or Start New Migration. The top-right Migration History button shows saved, failed, and rejected outcomes. Return to Migration keeps the current file and drafts; final confirmation must be checked again. Editing a patient field clears its approval."
+            });
+
+
+            ManualTopics.Add(new HelpManualTopic
+            {
                 Title = "1. Getting Started",
                 Content = "To begin using the application, launch the executable file from your desktop environment. " +
                           "Enter your unique system credentials on the login screen to verify your security access. " +

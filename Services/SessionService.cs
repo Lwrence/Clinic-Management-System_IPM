@@ -72,6 +72,7 @@ namespace CruzNeryClinic.Services
             return moduleName switch
             {
                 "ManageUsers" => false,
+                "DataMigration" => true,
                 "Maintenance" => false,
                 "Reports" => false,
                 _ => true

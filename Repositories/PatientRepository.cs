@@ -159,12 +159,28 @@ LIMIT 1;";
 
             try
             {
-                string patientCode = GenerateNextPatientCode(connection, transaction);
-                string createdAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                int patientId = InsertPatient(connection, transaction, patient, CryptoService.EncryptString);
 
-                using SqliteCommand insertPatientCommand = connection.CreateCommand();
-                insertPatientCommand.Transaction = transaction;
-                insertPatientCommand.CommandText = @"
+                transaction.Commit();
+                return patientId;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        #endregion
+
+        internal static int InsertPatient(SqliteConnection connection, SqliteTransaction transaction, Patient patient, Func<string?, string> encrypt)
+        {
+            string patientCode = GenerateNextPatientCode(connection, transaction);
+            string createdAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+            using SqliteCommand insertPatientCommand = connection.CreateCommand();
+            insertPatientCommand.Transaction = transaction;
+            insertPatientCommand.CommandText = @"
         INSERT INTO Patients (
             PatientCode,
             FirstName,
@@ -204,27 +220,27 @@ LIMIT 1;";
 
         SELECT last_insert_rowid();";
 
-                insertPatientCommand.Parameters.AddWithValue("@PatientCode", patientCode);
-                insertPatientCommand.Parameters.AddWithValue("@FirstName", patient.FirstName.Trim());
-                insertPatientCommand.Parameters.AddWithValue("@MiddleName", patient.MiddleName.Trim());
-                insertPatientCommand.Parameters.AddWithValue("@LastName", patient.LastName.Trim());
-                insertPatientCommand.Parameters.AddWithValue("@PhoneNumber", CryptoService.EncryptString(patient.PhoneNumber.Trim()));
-                insertPatientCommand.Parameters.AddWithValue("@BirthDate", patient.BirthDate.ToString("yyyy-MM-dd"));
-                insertPatientCommand.Parameters.AddWithValue("@Gender", patient.Gender.Trim());
-                insertPatientCommand.Parameters.AddWithValue("@Address", CryptoService.EncryptString(patient.Address.Trim()));
-                insertPatientCommand.Parameters.AddWithValue("@IsPWD", patient.IsPwd ? 1 : 0);
-                insertPatientCommand.Parameters.AddWithValue("@IsSeniorCitizen", patient.IsSeniorCitizen ? 1 : 0);
-                insertPatientCommand.Parameters.AddWithValue("@InitialTreatment", patient.InitialTreatment.Trim());
-                insertPatientCommand.Parameters.AddWithValue("@HasDataPrivacyConsent", patient.HasDataPrivacyConsent ? 1 : 0);
-                insertPatientCommand.Parameters.AddWithValue("@DataPrivacyConsentAt", ToDatabaseDateTime(patient.DataPrivacyConsentAt));
-                insertPatientCommand.Parameters.AddWithValue("@DataPrivacyConsentVersion", patient.DataPrivacyConsentVersion.Trim());
-                insertPatientCommand.Parameters.AddWithValue("@CreatedAt", createdAt);
+            insertPatientCommand.Parameters.AddWithValue("@PatientCode", patientCode);
+            insertPatientCommand.Parameters.AddWithValue("@FirstName", patient.FirstName.Trim());
+            insertPatientCommand.Parameters.AddWithValue("@MiddleName", patient.MiddleName.Trim());
+            insertPatientCommand.Parameters.AddWithValue("@LastName", patient.LastName.Trim());
+            insertPatientCommand.Parameters.AddWithValue("@PhoneNumber", encrypt(patient.PhoneNumber.Trim()));
+            insertPatientCommand.Parameters.AddWithValue("@BirthDate", patient.BirthDate.ToString("yyyy-MM-dd"));
+            insertPatientCommand.Parameters.AddWithValue("@Gender", patient.Gender.Trim());
+            insertPatientCommand.Parameters.AddWithValue("@Address", encrypt(patient.Address.Trim()));
+            insertPatientCommand.Parameters.AddWithValue("@IsPWD", patient.IsPwd ? 1 : 0);
+            insertPatientCommand.Parameters.AddWithValue("@IsSeniorCitizen", patient.IsSeniorCitizen ? 1 : 0);
+            insertPatientCommand.Parameters.AddWithValue("@InitialTreatment", patient.InitialTreatment.Trim());
+            insertPatientCommand.Parameters.AddWithValue("@HasDataPrivacyConsent", patient.HasDataPrivacyConsent ? 1 : 0);
+            insertPatientCommand.Parameters.AddWithValue("@DataPrivacyConsentAt", ToDatabaseDateTime(patient.DataPrivacyConsentAt));
+            insertPatientCommand.Parameters.AddWithValue("@DataPrivacyConsentVersion", patient.DataPrivacyConsentVersion.Trim());
+            insertPatientCommand.Parameters.AddWithValue("@CreatedAt", createdAt);
 
-                int patientId = Convert.ToInt32(insertPatientCommand.ExecuteScalar());
+            int patientId = Convert.ToInt32(insertPatientCommand.ExecuteScalar());
 
-                using SqliteCommand insertHistoryCommand = connection.CreateCommand();
-                insertHistoryCommand.Transaction = transaction;
-                insertHistoryCommand.CommandText = @"
+            using SqliteCommand insertHistoryCommand = connection.CreateCommand();
+            insertHistoryCommand.Transaction = transaction;
+            insertHistoryCommand.CommandText = @"
         INSERT INTO PatientHistories (
             PatientId,
             HasMedicalCondition,
@@ -248,29 +264,20 @@ LIMIT 1;";
             @CreatedAt
         );";
 
-                insertHistoryCommand.Parameters.AddWithValue("@PatientId", patientId);
-                insertHistoryCommand.Parameters.AddWithValue("@HasMedicalCondition", patient.HasMedicalCondition ? 1 : 0);
-                insertHistoryCommand.Parameters.AddWithValue("@MedicalConditionNotes", CryptoService.EncryptString(patient.MedicalConditionNotes.Trim()));
-                insertHistoryCommand.Parameters.AddWithValue("@AllergyNotes", CryptoService.EncryptString(patient.AllergyNotes.Trim()));
-                insertHistoryCommand.Parameters.AddWithValue("@CurrentMedication", CryptoService.EncryptString(patient.CurrentMedication.Trim()));
-                insertHistoryCommand.Parameters.AddWithValue("@RequiresMedicalClearance", patient.RequiresMedicalClearance ? 1 : 0);
-                insertHistoryCommand.Parameters.AddWithValue("@ClearanceNotes", CryptoService.EncryptString(patient.ClearanceNotes.Trim()));
-                insertHistoryCommand.Parameters.AddWithValue("@InitialTreatmentNotes", CryptoService.EncryptString(patient.InitialTreatmentNotes.Trim()));
-                insertHistoryCommand.Parameters.AddWithValue("@CreatedAt", createdAt);
+            insertHistoryCommand.Parameters.AddWithValue("@PatientId", patientId);
+            insertHistoryCommand.Parameters.AddWithValue("@HasMedicalCondition", patient.HasMedicalCondition ? 1 : 0);
+            insertHistoryCommand.Parameters.AddWithValue("@MedicalConditionNotes", encrypt(patient.MedicalConditionNotes.Trim()));
+            insertHistoryCommand.Parameters.AddWithValue("@AllergyNotes", encrypt(patient.AllergyNotes.Trim()));
+            insertHistoryCommand.Parameters.AddWithValue("@CurrentMedication", encrypt(patient.CurrentMedication.Trim()));
+            insertHistoryCommand.Parameters.AddWithValue("@RequiresMedicalClearance", patient.RequiresMedicalClearance ? 1 : 0);
+            insertHistoryCommand.Parameters.AddWithValue("@ClearanceNotes", encrypt(patient.ClearanceNotes.Trim()));
+            insertHistoryCommand.Parameters.AddWithValue("@InitialTreatmentNotes", encrypt(patient.InitialTreatmentNotes.Trim()));
+            insertHistoryCommand.Parameters.AddWithValue("@CreatedAt", createdAt);
 
-                insertHistoryCommand.ExecuteNonQuery();
+            insertHistoryCommand.ExecuteNonQuery();
 
-                transaction.Commit();
-                return patientId;
-            }
-            catch
-            {
-                transaction.Rollback();
-                throw;
-            }
+            return patientId;
         }
-
-        #endregion
 
         #region Update Patient
 
@@ -591,7 +598,7 @@ WHERE PatientId = @PatientId;";
 
         #region Helpers
 
-        private string GenerateNextPatientCode(SqliteConnection connection, SqliteTransaction transaction)
+        private static string GenerateNextPatientCode(SqliteConnection connection, SqliteTransaction transaction)
         {
             using SqliteCommand command = connection.CreateCommand();
             command.Transaction = transaction;
